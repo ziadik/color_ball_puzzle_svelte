@@ -1,0 +1,22 @@
+{
+  "name": "color-pool-puzzle",
+  "version": "1.0.0",
+  "description": "Color Pool Puzzle",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "devDependencies": {
+    "@sveltejs/vite-plugin-svelte": "7.2.0",
+    "svelte": "5.56.6",
+    "vite": "8.1.5",
+    "vite-plugin-compress": "^2.1.1",
+    "vite-plugin-compression2": "^2.5.3"
+  },
+  "main": "vite.config.js",
+  "keywords": [],
+  "author": "",
+  "license": "ISC"
+}

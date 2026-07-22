@@ -61,8 +61,13 @@
     rows = engine.field.length || 1;
 
     const cellByWidth = (containerWidth - 8) / cols;
-    const cellByHeight = (containerHeight - 8) / rows;
-    cellSize = Math.min(cellByWidth, cellByHeight, 75, Math.max(cellByWidth, cellByHeight) * 0.95);
+const cellByHeight = (containerHeight - 8) / rows;
+
+// Округляем cellSize вниз до целого числа
+let newCellSize = Math.floor(Math.min(cellByWidth, cellByHeight, 75));
+newCellSize = Math.max(newCellSize, 20);
+
+cellSize = newCellSize;
 
     fieldWidth = cellSize * cols + 4;
     fieldHeight = cellSize * rows + 4;
@@ -286,15 +291,15 @@
     >
       <div class="board-layer board-background" />
       
-      <div 
-        class="board-layer board-grid"
-        style="
-          left: {gridOffsetX}px;
-          top: {gridOffsetY}px;
-          width: calc(100% - {gridOffsetX}px);
-          height: calc(100% - {gridOffsetY}px);
-        "
-      />
+<div 
+  class="board-layer board-grid"
+  style="
+    left: {gridOffsetX}px;
+    top: {gridOffsetY}px;
+    width: calc(100% - {gridOffsetX}px);
+    height: calc(100% - {gridOffsetY}px);
+  "
+/>
 
       <div class="board-layer board-holes">
         {#each objects as { x, y, item } (item)}
@@ -316,7 +321,7 @@
       </div>
 
       <div class="board-layer board-bottom-walls">
-        {#each allWalls as { x, y, wallType } (wallType + x + y)}
+        {#each allWalls as { x, y, wallType } }
           {@const layer = getWallLayer(wallType)}
           {#if layer === 'bottom'}
             <WallSVG 
@@ -352,7 +357,7 @@
       </div>
 
       <div class="board-layer board-top-walls">
-        {#each allWalls as { x, y, wallType } (wallType + x + y)}
+        {#each allWalls as { x, y, wallType } }
           {@const layer = getWallLayer(wallType)}
           {#if layer === 'top'}
             <WallSVG 
@@ -385,7 +390,7 @@
   .board {
     position: relative;
     border-radius: 14px;
-    padding: 3px;
+    padding: 0;
     overflow: hidden;
     cursor: pointer;
     touch-action: none;
@@ -444,6 +449,7 @@
     border: 5px solid;
     background: rgba(0, 0, 0, 0.08);
     opacity: 1;
+    z-index: 2;
   }
 
   .hole-inner {
@@ -462,7 +468,7 @@
   }
 
   .board-balls {
-    z-index: 4;
+    z-index: 5;
   }
 
   .ball {
@@ -471,6 +477,7 @@
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
     transition: transform 0.15s ease;
     pointer-events: none;
+    z-index: 5;
   }
 
   /* СВЕТЛАЯ ТЕМА - блик */
@@ -515,7 +522,7 @@
   @media (max-width: 480px) {
     .board {
       border-radius: 10px;
-      padding: 2px;
+      padding: 0;
     }
   }
 </style>

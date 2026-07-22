@@ -16,94 +16,58 @@
   let { containerWidth = 0, containerHeight = 0 } = $props();
 
   let engine = $state(null);
+  let cellSize = $state(0);
+  let fieldWidth = $state(0);
+  let fieldHeight = $state(0);
+  let cols = $state(0);
+  let rows = $state(0);
+  let touchStartX = $state(0);
+  let touchStartY = $state(0);
+  let isDragging = $state(false);
   let isDark = $state(false);
+  
+  let objects = $state([]);
+  let allWalls = $state([]);
+  
+  let animating = $state(false);
 
   isDarkMode.subscribe(value => isDark = value);
 
-  // --- ПОДПИСКА НА ENGINE ---
   $effect(() => {
     const unsubscribe = fieldEngine.subscribe(e => {
       engine = e;
+      if (engine) {
+        updateDimensions();
+        updateObjectsAndWalls();
+      }
     });
     return unsubscribe;
   });
 
-  // --- ВЫЧИСЛЕНИЕ cellSize ---
-  let cellSize = $derived.by(() => {
-    if (!engine || containerWidth === 0 || containerHeight === 0) return 0;
-    
-    const cols = engine.field[0]?.length || 1;
-    const rows = engine.field.length || 1;
-    
-    const maxCellByWidth = (containerWidth - 8) / cols;
-    const maxCellByHeight = (containerHeight - 8) / rows;
-    
-    let size = Math.floor(Math.min(maxCellByWidth, maxCellByHeight, 75));
-    return Math.max(size, 30);
+  $effect(() => {
+    updateDimensions();
   });
 
-  // --- ВЫЧИСЛЕНИЕ РАЗМЕРОВ ПОЛЯ ---
-  let fieldWidth = $derived.by(() => {
-    if (!engine || cellSize === 0) return 0;
-    const cols = engine.field[0]?.length || 1;
-    return cellSize * cols + 4;
-  });
-
-  let fieldHeight = $derived.by(() => {
-    if (!engine || cellSize === 0) return 0;
-    const rows = engine.field.length || 1;
-    return cellSize * rows + 4;
-  });
-
-  // --- ВЫЧИСЛЕНИЕ OBJECTS (шары и дырки) ---
-  let objects = $derived.by(() => {
-    if (!engine) return [];
-    const result = [];
-    for (let y = 0; y < engine.field.length; y++) {
-      for (let x = 0; x < engine.field[0].length; x++) {
-        const item = engine.field[y][x];
-        if (item && (item.type === 'ball' || item.type === 'hole')) {
-          result.push({ x, y, item });
-        }
-      }
+  $effect(() => {
+    if (engine && cellSize > 0) {
+      updateObjectsAndWalls();
     }
-    return result;
   });
 
-  // --- ВЫЧИСЛЕНИЕ WALLS ---
-  let allWalls = $derived.by(() => {
-    if (!engine) return [];
-    const result = [];
-    const wallMap = {
-      'L': 'L', 'R': 'R', 'T': 'T', 'D': 'D',
-      'LIT': 'LIT', 'RIT': 'RIT', 'LOT': 'LOT', 'ROT': 'ROT',
-      'LID': 'LID', 'RID': 'RID', 'LOD': 'LOD', 'ROD': 'ROD',
-      'B': 'B', 'LB': 'LB', 'RB': 'RB', 'N': 'N'
-    };
-    for (let y = 0; y < engine.walls.length; y++) {
-      for (let x = 0; x < engine.walls[0]?.length; x++) {
-        const wall = engine.walls[y]?.[x];
-        if (wall && wall !== 'N') {
-          const wallType = wallMap[wall];
-          if (wallType) {
-            result.push({ x, y, wallType });
-          }
-        }
-      }
-    }
-    return result;
-  });
+  function updateDimensions() {
+    if (!engine || containerWidth === 0 || containerHeight === 0) return;
 
-  // --- ОСТАЛЬНЫЕ ПЕРЕМЕННЫЕ ---
-  let cols = $derived(engine?.field[0]?.length || 0);
-  let rows = $derived(engine?.field.length || 0);
-  
-  let touchStartX = $state(0);
-  let touchStartY = $state(0);
-  let isDragging = $state(false);
-  let animating = $state(false);
+    cols = engine.field[0]?.length || 1;
+    rows = engine.field.length || 1;
 
-  // --- ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ---
+    const cellByWidth = (containerWidth - 8) / cols;
+    const cellByHeight = (containerHeight - 8) / rows;
+    cellSize = Math.min(cellByWidth, cellByHeight, 75, Math.max(cellByWidth, cellByHeight) * 0.95);
+
+    fieldWidth = cellSize * cols + 4;
+    fieldHeight = cellSize * rows + 4;
+  }
+
   function getWallType(x, y) {
     if (!engine || !engine.walls) return null;
     if (y >= 0 && y < engine.walls.length && x >= 0 && x < engine.walls[0]?.length) {
@@ -119,47 +83,6 @@
     return null;
   }
 
-  function getCellFromPosition(clientX, clientY) {
-    const boardEl = document.querySelector('.board');
-    if (!boardEl) return { col: null, row: null };
-    
-    const rect = boardEl.getBoundingClientRect();
-    const padding = 3;
-    
-    let relX = clientX - rect.left - padding;
-    let relY = clientY - rect.top - padding;
-    
-    const col = Math.floor(relX / cellSize);
-    const row = Math.floor(relY / cellSize);
-    
-    return { col, row };
-  }
-
-  async function handleMove(col, row, direction) {
-    if (!engine) return;
-    if (row < 0 || row >= engine.field.length || col < 0 || col >= engine.field[0].length) return;
-    
-    const item = engine.field[row][col];
-    if (!item || item.type !== 'ball') return;
-    
-    animating = true;
-    const success = makeMove(col, row, direction);
-    if (success) {
-      if (engine.lastMoveWasHitHole) {
-        soundManager.playHoleCapture();
-        if (vibrationEnabled) soundManager.playVibration();
-      } else {
-        soundManager.playMove();
-      }
-      // После хода engine обновится через store, а $derived пересчитает все автоматически
-      await new Promise(resolve => setTimeout(resolve, 150));
-    } else {
-      soundManager.playError();
-    }
-    animating = false;
-  }
-
-  // --- TOUCH HANDLING ---
   function handleTouchStart(e) {
     if (animating) return;
     const touch = e.touches[0];
@@ -183,24 +106,27 @@
   async function handleTouchEnd(e) {
     if (animating) return;
     if (!isDragging) return;
+
     const touch = e.changedTouches[0];
     if (!touch) return;
     
     const dx = touch.clientX - touchStartX;
     const dy = touch.clientY - touchStartY;
-    if (Math.abs(dx) < 15 && Math.abs(dy) < 15) return;
+
+    const threshold = 15;
+    if (Math.abs(dx) < threshold && Math.abs(dy) < threshold) return;
 
     const direction = Math.abs(dx) > Math.abs(dy) 
       ? (dx > 0 ? 'right' : 'left')
       : (dy > 0 ? 'down' : 'up');
 
     const { col, row } = getCellFromPosition(touchStartX, touchStartY);
+
     if (col !== null && row !== null) {
       await handleMove(col, row, direction);
     }
   }
 
-  // --- MOUSE HANDLING ---
   let mouseStartX = 0;
   let mouseStartY = 0;
   let isMouseDown = false;
@@ -229,7 +155,9 @@
 
     const dx = e.clientX - mouseStartX;
     const dy = e.clientY - mouseStartY;
-    if (Math.abs(dx) < 15 && Math.abs(dy) < 15) {
+
+    const threshold = 15;
+    if (Math.abs(dx) < threshold && Math.abs(dy) < threshold) {
       isDragging = false;
       return;
     }
@@ -239,6 +167,7 @@
       : (dy > 0 ? 'down' : 'up');
 
     const { col, row } = getCellFromPosition(mouseStartX, mouseStartY);
+
     if (col !== null && row !== null) {
       await handleMove(col, row, direction);
     }
@@ -250,12 +179,90 @@
     isDragging = false;
   }
 
-  // --- ОФФСЕТЫ ---
+  function getCellFromPosition(clientX, clientY) {
+    const boardEl = document.querySelector('.board');
+    if (!boardEl) return { col: null, row: null };
+    
+    const rect = boardEl.getBoundingClientRect();
+    const padding = 3;
+    const offsetX = cellSize / 2;
+    const offsetY = cellSize / 1.5;
+    
+    let relX = clientX - rect.left - padding - offsetX;
+    let relY = clientY - rect.top - padding - offsetY;
+    
+    const col = Math.floor(relX / cellSize);
+    const row = Math.floor(relY / cellSize);
+    
+    return { col, row };
+  }
+
+  async function handleMove(col, row, direction) {
+    if (!engine) return;
+    
+    if (row < 0 || row >= engine.field.length || col < 0 || col >= engine.field[0].length) {
+      return;
+    }
+    
+    const item = engine.field[row][col];
+    if (!item || item.type !== 'ball') {
+      return;
+    }
+    
+    animating = true;
+    const success = makeMove(col, row, direction);
+    if (success) {
+      if (engine.lastMoveWasHitHole) {
+        soundManager.playHoleCapture();
+        if (vibrationEnabled) soundManager.playVibration();
+      } else {
+        soundManager.playMove();
+      }
+      updateObjectsAndWalls();
+      await new Promise(resolve => setTimeout(resolve, 150));
+    } else {
+      soundManager.playError();
+    }
+    animating = false;
+  }
+
+  function getObjects() {
+    if (!engine) return [];
+    const result = [];
+    for (let y = 0; y < engine.field.length; y++) {
+      for (let x = 0; x < engine.field[0].length; x++) {
+        const item = engine.field[y][x];
+        if (item && (item.type === 'ball' || item.type === 'hole')) {
+          result.push({ x, y, item });
+        }
+      }
+    }
+    return result;
+  }
+
+  function getAllWalls() {
+    if (!engine) return [];
+    const result = [];
+    for (let y = 0; y < engine.walls.length; y++) {
+      for (let x = 0; x < engine.walls[0]?.length; x++) {
+        const wallType = getWallType(x, y);
+        if (wallType && wallType !== 'N') {
+          result.push({ x, y, wallType });
+        }
+      }
+    }
+    return result;
+  }
+
+  function updateObjectsAndWalls() {
+    objects = getObjects();
+    allWalls = getAllWalls();
+  }
+
   const gridOffsetX = $derived(cellSize / 2);
   const gridOffsetY = $derived(cellSize / 1.5);
 </script>
 
-<!-- BOARD CONTAINER -->
 <div 
   class="board-container"
   style="width: {containerWidth}px; height: {containerHeight}px;"
@@ -277,10 +284,8 @@
       on:touchmove={handleTouchMove}
       on:touchend={handleTouchEnd}
     >
-      <!-- LAYER 1: Background -->
       <div class="board-layer board-background" />
       
-      <!-- LAYER 2: Grid lines -->
       <div 
         class="board-layer board-grid"
         style="
@@ -291,7 +296,6 @@
         "
       />
 
-      <!-- LAYER 3: Holes -->
       <div class="board-layer board-holes">
         {#each objects as { x, y, item } (item)}
           {#if item.type === 'hole'}
@@ -311,7 +315,6 @@
         {/each}
       </div>
 
-      <!-- LAYER 4: Bottom walls -->
       <div class="board-layer board-bottom-walls">
         {#each allWalls as { x, y, wallType } (wallType + x + y)}
           {@const layer = getWallLayer(wallType)}
@@ -328,7 +331,6 @@
         {/each}
       </div>
 
-      <!-- LAYER 5: Balls -->
       <div class="board-layer board-balls">
         {#each objects as { x, y, item } (item)}
           {#if item.type === 'ball'}
@@ -349,7 +351,6 @@
         {/each}
       </div>
 
-      <!-- LAYER 6: Top walls -->
       <div class="board-layer board-top-walls">
         {#each allWalls as { x, y, wallType } (wallType + x + y)}
           {@const layer = getWallLayer(wallType)}
@@ -369,6 +370,7 @@
   {/if}
 </div>
 
+<!-- src/components/GameBoard.svelte - только стили -->
 <style>
   .board-container {
     display: flex;
@@ -382,7 +384,6 @@
 
   .board {
     position: relative;
-    background: #50427D;
     border-radius: 14px;
     padding: 3px;
     overflow: hidden;
@@ -390,43 +391,47 @@
     touch-action: none;
   }
 
-  .board.dark {
-    background: #2d234b;
+  /* СВЕТЛАЯ ТЕМА - фон поля #50427D */
+  .board {
+    background: #50427D;
   }
 
-  .board-layer {
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    pointer-events: none;
+  /* ТЕМНАЯ ТЕМА - фон поля #2D234B */
+  .board.dark {
+    background: #2D234B;
   }
 
   .board-background {
-    background: #50427D;
     border-radius: 12px;
     z-index: 0;
   }
 
-  .board.dark .board-background {
-    background: #2d234b;
+  /* СВЕТЛАЯ ТЕМА - фон поля #50427D */
+  .board-background {
+    background: #50427D;
   }
 
+  /* ТЕМНАЯ ТЕМА - фон поля #2D234B */
+  .board.dark .board-background {
+    background: #2D234B;
+  }
+
+  /* СЕТКА */
   .board-grid {
     background-image: 
-      linear-gradient(rgba(59, 45, 104, 0.3) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(59, 45, 104, 0.3) 1px, transparent 1px);
+      linear-gradient(rgba(59, 45, 104, 0.4) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(59, 45, 104, 0.4) 1px, transparent 1px);
     background-size: var(--cell-size, 40px) var(--cell-size, 40px);
     border-radius: 12px;
     z-index: 1;
     position: absolute;
   }
 
+  /* ТЕМНАЯ ТЕМА - сетка */
   .board.dark .board-grid {
     background-image: 
-      linear-gradient(rgba(100, 86, 145, 0.2) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(100, 86, 145, 0.2) 1px, transparent 1px);
+      linear-gradient(rgba(100, 86, 145, 0.3) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(100, 86, 145, 0.3) 1px, transparent 1px);
   }
 
   .board-holes {
@@ -468,6 +473,7 @@
     pointer-events: none;
   }
 
+  /* СВЕТЛАЯ ТЕМА - блик */
   .ball-highlight {
     position: absolute;
     top: 15%;
@@ -475,7 +481,12 @@
     width: 25%;
     height: 20%;
     border-radius: 50%;
-    background: rgba(255, 255, 255, 0.4);
+    background: rgba(255, 255, 255, 0.3);
+  }
+
+  /* ТЕМНАЯ ТЕМА - блик ярче */
+  .board.dark .ball-highlight {
+    background: rgba(255, 255, 255, 0.6);
   }
 
   .ball.hint {

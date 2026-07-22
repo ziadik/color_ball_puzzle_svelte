@@ -1,49 +1,67 @@
+<!-- src/components/SettingsModal.svelte -->
 <script>
-  import { 
-    showSettings, 
-    soundEnabled, 
-    vibrationEnabled, 
-    isDarkMode,
-    toggleSound,
-    toggleVibration,
-    toggleDarkMode
-  } from '../lib/stores/gameStore.svelte.js';
+  import { showSettings, soundEnabled, vibrationEnabled, isDarkMode } from '../lib/stores/gameStore.svelte.js';
+  import { soundManager } from '../lib/utils/sound.js';
+
+  let localSound = false;
+  let localVibration = false;
+  let localDark = false;
+
+  soundEnabled.subscribe(v => localSound = v);
+  vibrationEnabled.subscribe(v => localVibration = v);
+  isDarkMode.subscribe(v => localDark = v);
 
   function close() {
     showSettings.set(false);
+  }
+
+  function toggleSound() {
+    localSound = !localSound;
+    soundEnabled.set(localSound);
+    soundManager.enabled = localSound;
+  }
+
+  function toggleVibration() {
+    localVibration = !localVibration;
+    vibrationEnabled.set(localVibration);
+  }
+
+  function toggleDark() {
+    localDark = !localDark;
+    isDarkMode.set(localDark);
+    document.documentElement.classList.toggle('dark', localDark);
   }
 </script>
 
 {#if $showSettings}
   <div class="overlay" on:click={e => e.target === e.currentTarget && close()}>
-    <div class="modal" class:dark={$isDarkMode}>
+    <div class="modal" class:dark={localDark}>
       <h2>Settings</h2>
 
-      <div class="setting">
+      <div class="setting" on:click={toggleSound}>
         <label>Sound Effects</label>
         <div class="toggle">
-          <input type="checkbox" checked={$soundEnabled} on:change={toggleSound} />
-          <span class="slider"></span>
+          <div class="slider" class:active={localSound}></div>
         </div>
       </div>
 
-      <div class="setting">
+      <div class="setting" on:click={toggleVibration}>
         <label>Vibration</label>
         <div class="toggle">
-          <input type="checkbox" checked={$vibrationEnabled} on:change={toggleVibration} />
-          <span class="slider"></span>
+          <div class="slider" class:active={localVibration}></div>
         </div>
       </div>
 
-      <div class="setting">
+      <div class="setting" on:click={toggleDark}>
         <label>Dark Mode</label>
         <div class="toggle">
-          <input type="checkbox" checked={$isDarkMode} on:change={toggleDarkMode} />
-          <span class="slider"></span>
+          <div class="slider" class:active={localDark}></div>
         </div>
       </div>
 
-      <button class="close-btn" on:click={close}>Close</button>
+      <button class="close-btn" class:dark={localDark} on:click={close}>
+        Close
+      </button>
     </div>
   </div>
 {/if}
@@ -55,7 +73,7 @@
     left: 0;
     right: 0;
     bottom: 0;
-    background: rgba(0,0,0,0.4);
+    background: rgba(0, 0, 0, 0.4);
     backdrop-filter: blur(8px);
     -webkit-backdrop-filter: blur(8px);
     display: flex;
@@ -66,17 +84,17 @@
   }
 
   .modal {
-    background: #ffffff;
+    background: #FFFFFF;
     border-radius: 24px;
     padding: 28px 24px 24px;
     max-width: 320px;
     width: 90%;
-    box-shadow: 0 20px 60px rgba(0,0,0,0.15);
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
   }
 
   .modal.dark {
-    background: #2d234b;
-    box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+    background: #2D234B;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
   }
 
   h2 {
@@ -96,7 +114,8 @@
     align-items: center;
     justify-content: space-between;
     padding: 12px 0;
-    border-bottom: 1px solid rgba(0,0,0,0.06);
+    border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+    cursor: pointer;
   }
 
   .modal.dark .setting {
@@ -111,6 +130,7 @@
     font-size: 15px;
     font-weight: 500;
     color: #333;
+    cursor: pointer;
   }
 
   .modal.dark .setting label {
@@ -122,12 +142,6 @@
     width: 44px;
     height: 26px;
     flex-shrink: 0;
-  }
-
-  .toggle input {
-    opacity: 0;
-    width: 0;
-    height: 0;
   }
 
   .slider {
@@ -152,14 +166,14 @@
     background: #fff;
     border-radius: 50%;
     transition: 0.3s;
-    box-shadow: 0 1px 4px rgba(0,0,0,0.15);
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.15);
   }
 
-  .toggle input:checked + .slider {
+  .slider.active {
     background: #722FC0;
   }
 
-  .toggle input:checked + .slider::before {
+  .slider.active::before {
     transform: translateX(18px);
   }
 

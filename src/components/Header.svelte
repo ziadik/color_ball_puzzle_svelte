@@ -1,4 +1,3 @@
-<!-- src/components/Header.svelte -->
 <script>
   import { 
     currentLevelIndex, 
@@ -11,10 +10,10 @@
     useHint,
     undoMove,
     movesCount,
-    isDarkMode,
-    forceRefresh  // ← импортируем
+    isDarkMode
   } from '../lib/stores/gameStore.svelte.js';
   import { soundManager } from '../lib/utils/sound.js';
+  import { Colors } from '../lib/styles/colors.js';
 
   let isDark = false;
   let moves = 0;
@@ -23,13 +22,19 @@
   movesCount.subscribe(value => moves = value);
 
   function showWallTypes() {
-    console.log('📐 Opening Wall Types Reference from Header');
     const event = new CustomEvent('show-wall-types');
     document.dispatchEvent(event);
   }
 </script>
 
-<header class="header" class:dark={isDark}>
+<header 
+  class="header" 
+  class:dark={isDark}
+  style="
+    background: ${isDark ? 'rgba(45, 35, 75, 0.92)' : 'rgba(255,255,255,0.85)'};
+    box-shadow: ${isDark ? '0 2px 12px rgba(0,0,0,0.3)' : '0 2px 12px rgba(0,0,0,0.06)'};
+  "
+>
   <div class="header-left">
     <button 
       class="icon-btn" 
@@ -60,20 +65,6 @@
   </div>
 
   <div class="header-right">
-    <!-- КНОПКА ПРИНУДИТЕЛЬНОГО ОБНОВЛЕНИЯ (для теста) -->
-    <button 
-      class="icon-btn" 
-      on:click={forceRefresh}
-      aria-label="Refresh"
-      title="Refresh Board"
-      style="color: #ff6b6b;"
-    >
-      <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
-        <path d="M1 4v6h6" stroke-linecap="round" stroke-linejoin="round"/>
-        <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10" stroke-linecap="round" stroke-linejoin="round"/>
-      </svg>
-    </button>
-
     <button 
       class="icon-btn" 
       on:click={() => {

@@ -6,35 +6,35 @@
   import WinModal from './components/WinModal.svelte';
   import SettingsModal from './components/SettingsModal.svelte';
   import WallTypesDemo from './components/WallTypesDemo.svelte';
-  import { isDarkMode } from './lib/stores/gameStore.svelte.js';
+  import { isDarkMode, currentLevelIndex } from './lib/stores/gameStore.svelte.js';
 
   let boardContainer;
   let containerWidth = $state(0);
   let containerHeight = $state(0);
   let isDark = $state(false);
   let showWallTypes = $state(false);
+  let boardKey = $state(0);
 
-  // Update dark mode state
-  $effect(() => {
-    const unsubscribe = isDarkMode.subscribe(value => {
-      isDark = value;
-      document.documentElement.classList.toggle('dark', value);
-    });
-    return unsubscribe;
+  isDarkMode.subscribe(value => {
+    isDark = value;
+    document.documentElement.classList.toggle('dark', value);
   });
 
   onMount(() => {
+    const unsubscribe = currentLevelIndex.subscribe(() => {
+      boardKey++;
+    });
+
     updateSize();
     window.addEventListener('resize', updateSize);
 
-    // Listen for wall types show event from Header
     const handleShowWallTypes = () => {
-      console.log('📐 Opening Wall Types Reference');
       showWallTypes = true;
     };
     document.addEventListener('show-wall-types', handleShowWallTypes);
 
     return () => {
+      unsubscribe();
       window.removeEventListener('resize', updateSize);
       document.removeEventListener('show-wall-types', handleShowWallTypes);
     };
@@ -49,15 +49,11 @@
 
   function toggleWallTypes() {
     showWallTypes = !showWallTypes;
-    if (!showWallTypes) {
-      console.log('📐 Closing Wall Types Reference');
-    }
   }
 </script>
 
 <div class="app" class:dark={isDark}>
   {#if showWallTypes}
-    <!-- Wall Types Reference View -->
     <div class="wall-types-overlay" class:dark={isDark}>
       <div class="wall-types-header">
         <h2>🧱 Wall Types Reference</h2>
@@ -68,15 +64,16 @@
       </div>
     </div>
   {:else}
-    <!-- Game View -->
     <div class="game-wrapper">
       <Header />
       
       <div class="board-wrapper" bind:this={boardContainer}>
-        <GameBoard 
-          containerWidth={containerWidth}
-          containerHeight={containerHeight }
-        />
+        {#key boardKey}
+          <GameBoard 
+            containerWidth={containerWidth}
+            containerHeight={containerHeight}
+          />
+        {/key}
       </div>
     </div>
   {/if}
@@ -92,14 +89,19 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    background: #f8f4ff;
     padding: 12px;
     transition: background 0.3s ease;
     overflow: hidden;
   }
 
+  /* СВЕТЛАЯ ТЕМА (по умолчанию) */
+  .app {
+    background: #F8F4FF;
+  }
+
+  /* ТЕМНАЯ ТЕМА */
   .app.dark {
-    background: #4a3a6a;
+    background: #363344;
   }
 
   .game-wrapper {
@@ -123,14 +125,13 @@
     padding: 2px;
   }
 
-  /* Wall Types Overlay */
   .wall-types-overlay {
     position: fixed;
     top: 0;
     left: 0;
     right: 0;
     bottom: 0;
-    background: #f8f4ff;
+    background: #F8F4FF;
     z-index: 1000;
     display: flex;
     flex-direction: column;

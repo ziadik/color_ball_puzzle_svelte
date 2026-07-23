@@ -6,6 +6,7 @@
   import WinModal from './components/WinModal.svelte';
   import SettingsModal from './components/SettingsModal.svelte';
   import WallTypesDemo from './components/WallTypesDemo.svelte';
+  import LevelEditor from './components/LevelEditor.svelte';
   import { isDarkMode, currentLevelIndex } from './lib/stores/gameStore.svelte.js';
 
   let boardContainer;
@@ -14,6 +15,7 @@
   let isDark = $state(false);
   let showWallTypes = $state(false);
   let boardKey = $state(0);
+  let showEditor = $state(false); // <-- Добавлено
 
   isDarkMode.subscribe(value => {
     isDark = value;
@@ -33,10 +35,20 @@
     };
     document.addEventListener('show-wall-types', handleShowWallTypes);
 
+    // Горячая клавиша для открытия редактора
+    const handleKeyDown = (e) => {
+      if (e.ctrlKey && e.key === 'e') {
+        e.preventDefault();
+        showEditor = !showEditor;
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+
     return () => {
       unsubscribe();
       window.removeEventListener('resize', updateSize);
       document.removeEventListener('show-wall-types', handleShowWallTypes);
+      window.removeEventListener('keydown', handleKeyDown);
     };
   });
 
@@ -49,6 +61,10 @@
 
   function toggleWallTypes() {
     showWallTypes = !showWallTypes;
+  }
+
+  function toggleEditor() {
+    showEditor = !showEditor;
   }
 </script>
 
@@ -63,6 +79,19 @@
         <WallTypesDemo />
       </div>
     </div>
+  {:else if showEditor}
+    <div class="editor-overlay" class:dark={isDark}>
+      <div class="editor-header-bar">
+        <h2>🎮 Level Editor</h2>
+        <div class="editor-actions">
+          <span class="shortcut-hint">Ctrl+E to toggle</span>
+          <button class="close-btn" on:click={toggleEditor}>✕</button>
+        </div>
+      </div>
+      <div class="editor-scroll">
+        <LevelEditor />
+      </div>
+    </div>
   {:else}
     <div class="game-wrapper">
       <Header />
@@ -75,6 +104,11 @@
           />
         {/key}
       </div>
+
+      <!-- Кнопка открытия редактора -->
+      <button class="editor-toggle" on:click={toggleEditor} title="Open Level Editor (Ctrl+E)">
+        🛠️
+      </button>
     </div>
   {/if}
 
@@ -94,12 +128,9 @@
     overflow: hidden;
   }
 
-  /* СВЕТЛАЯ ТЕМА (по умолчанию) */
   .app {
     background: #F8F4FF;
   }
-
-  /* ТЕМНАЯ ТЕМА */
   .app.dark {
     background: #363344;
   }
@@ -113,6 +144,7 @@
     max-width: 580px;
     height: 100%;
     max-height: 750px;
+    position: relative;
   }
 
   .board-wrapper {
@@ -123,6 +155,119 @@
     align-items: center;
     justify-content: center;
     padding: 2px;
+  }
+
+  /* Кнопка редактора */
+  .editor-toggle {
+    position: absolute;
+    bottom: 8px;
+    right: 8px;
+    width: 40px;
+    height: 40px;
+    border: none;
+    border-radius: 50%;
+    background: rgba(114, 47, 192, 0.15);
+    color: #722fc0;
+    font-size: 18px;
+    cursor: pointer;
+    transition: all 0.2s;
+    backdrop-filter: blur(4px);
+    z-index: 10;
+  }
+
+  .dark .editor-toggle {
+    background: rgba(166, 157, 212, 0.15);
+    color: #a69dd4;
+  }
+
+  .editor-toggle:hover {
+    transform: scale(1.1);
+    background: rgba(114, 47, 192, 0.25);
+  }
+
+  .dark .editor-toggle:hover {
+    background: rgba(166, 157, 212, 0.25);
+  }
+
+  /* Оверлей редактора */
+  .editor-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: #F8F4FF;
+    z-index: 2000;
+    display: flex;
+    flex-direction: column;
+    padding: 16px;
+    overflow: hidden;
+    animation: slideIn 0.3s ease;
+  }
+
+  .editor-overlay.dark {
+    background: #363344;
+  }
+
+  .editor-header-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-bottom: 12px;
+    border-bottom: 1px solid rgba(80, 66, 125, 0.1);
+    flex-shrink: 0;
+  }
+
+  .editor-overlay.dark .editor-header-bar {
+    border-bottom: 1px solid rgba(217, 200, 251, 0.08);
+  }
+
+  .editor-header-bar h2 {
+    font-size: 20px;
+    font-weight: 700;
+    color: #50427D;
+    margin: 0;
+  }
+
+  .editor-overlay.dark .editor-header-bar h2 {
+    color: #d9c8fb;
+  }
+
+  .editor-actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .shortcut-hint {
+    font-size: 12px;
+    color: rgba(80, 66, 125, 0.4);
+    background: rgba(80, 66, 125, 0.06);
+    padding: 4px 10px;
+    border-radius: 6px;
+  }
+
+  .dark .shortcut-hint {
+    color: rgba(217, 200, 251, 0.3);
+    background: rgba(217, 200, 251, 0.05);
+  }
+
+  .editor-scroll {
+    flex: 1;
+    overflow-y: auto;
+    padding-top: 12px;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .editor-scroll::-webkit-scrollbar {
+    width: 6px;
+  }
+  .editor-scroll::-webkit-scrollbar-thumb {
+    background: rgba(80, 66, 125, 0.2);
+    border-radius: 3px;
+  }
+  .editor-overlay.dark .editor-scroll::-webkit-scrollbar-thumb {
+    background: rgba(217, 200, 251, 0.15);
   }
 
   .wall-types-overlay {
@@ -188,12 +333,14 @@
     transform: scale(1.05);
   }
 
-  .wall-types-overlay.dark .close-btn {
+  .wall-types-overlay.dark .close-btn,
+  .editor-overlay.dark .close-btn {
     background: rgba(217, 200, 251, 0.08);
     color: #d9c8fb;
   }
 
-  .wall-types-overlay.dark .close-btn:hover {
+  .wall-types-overlay.dark .close-btn:hover,
+  .editor-overlay.dark .close-btn:hover {
     background: rgba(217, 200, 251, 0.15);
   }
 
@@ -204,32 +351,9 @@
     -webkit-overflow-scrolling: touch;
   }
 
-  .wall-types-scroll::-webkit-scrollbar {
-    width: 6px;
-  }
-
-  .wall-types-scroll::-webkit-scrollbar-track {
-    background: transparent;
-  }
-
-  .wall-types-scroll::-webkit-scrollbar-thumb {
-    background: rgba(80, 66, 125, 0.2);
-    border-radius: 3px;
-  }
-
-  .wall-types-overlay.dark .wall-types-scroll::-webkit-scrollbar-thumb {
-    background: rgba(217, 200, 251, 0.2);
-  }
-
   @keyframes slideIn {
-    from {
-      opacity: 0;
-      transform: scale(0.95);
-    }
-    to {
-      opacity: 1;
-      transform: scale(1);
-    }
+    from { opacity: 0; transform: scale(0.95); }
+    to { opacity: 1; transform: scale(1); }
   }
 
   @media (max-width: 480px) {
@@ -240,16 +364,26 @@
       gap: 10px;
       max-height: 90vh;
     }
-    .wall-types-overlay {
-      padding: 12px;
+    .editor-overlay {
+      padding: 10px;
     }
-    .wall-types-header h2 {
-      font-size: 17px;
+    .editor-header-bar h2 {
+      font-size: 16px;
+    }
+    .shortcut-hint {
+      display: none;
     }
     .close-btn {
       width: 34px;
       height: 34px;
       font-size: 16px;
+    }
+    .editor-toggle {
+      width: 34px;
+      height: 34px;
+      font-size: 15px;
+      bottom: 4px;
+      right: 4px;
     }
   }
 

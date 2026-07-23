@@ -1,4 +1,6 @@
-# 🎨 Color Pool Puzzle
+# 🎨 Color Pool Puzzle 
+Посетите [наш сайт](https://ziadik.github.io/color_ball_puzzle_svelte/)
+
 
 Color Pool Puzzle — это логическая игра-головоломка, где нужно направлять цветные шарики в соответствующие лунки, используя различные типы стен и препятствий.
 

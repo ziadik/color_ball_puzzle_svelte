@@ -1,0 +1,17 @@
+{
+  "name": "Color Ball Puzzle",
+  "description": "Логическая игра-головоломка с цветными шариками",
+  "version": "1.0.0",
+  "author": "Dmitrii Ziadik",
+  "icons": {
+    "16": "public/icons/icon-16.png",
+    "32": "public/icons/icon-32.png",
+    "64": "public/icons/icon-64.png",
+    "128": "public/icons/icon-128.png",
+    "256": "public/icons/icon-256.png"
+  },
+  "launch_url": "https://ziadik.github.io/color_ball_puzzle_svelte/",
+  "platform": "desktop+web",
+  "status": "enabled",
+  "orientation": "portrait"
+}

@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
+    "deploy-vk": "node deploy-vk.js",
     "preview": "vite preview"
   },
   "devDependencies": {
@@ -18,5 +19,8 @@
   "main": "vite.config.js",
   "keywords": [],
   "author": "",
-  "license": "ISC"
+  "license": "ISC",
+  "dependencies": {
+    "@vkontakte/vk-bridge": "^3.0.2"
+  }
 }

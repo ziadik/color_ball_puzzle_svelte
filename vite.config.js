@@ -16,4 +16,20 @@ export default defineConfig({
       threshold: 10240, // сжимать файлы, размер которых больше этого порога
     }),
   ],
+  base: "./", // Важно для VK Mini App
+  build: {
+    outDir: "dist",
+    assetsDir: "assets",
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          "vk-bridge": ["@vkontakte/vk-bridge"],
+        },
+      },
+    },
+  },
+  server: {
+    port: 5173,
+    host: true,
+  },
 });

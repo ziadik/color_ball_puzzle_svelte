@@ -1,6 +1,7 @@
 <!-- src/App.svelte -->
 <script>
   import { onMount } from 'svelte';
+  import { vkBridge } from './lib/services/vkBridge.js';
   import Header from './components/Header.svelte';
   import GameBoard from './components/GameBoard.svelte';
   import WinModal from './components/WinModal.svelte';
@@ -15,14 +16,27 @@
   let isDark = $state(false);
   let showWallTypes = $state(false);
   let boardKey = $state(0);
-  let showEditor = $state(false); // <-- Добавлено
+  let showEditor = $state(false);
 
   isDarkMode.subscribe(value => {
     isDark = value;
     document.documentElement.classList.toggle('dark', value);
   });
 
-  onMount(() => {
+  onMount(async () => {
+    // Инициализация VK Bridge
+    await vkBridge.init();
+
+    // Если приложение в VK - показываем загрузку
+    if (vkBridge.isVKApp()) {
+      vkBridge.showLoading();
+      
+      // Скрываем загрузку после загрузки приложения
+      setTimeout(() => {
+        vkBridge.hideLoading();
+      }, 1000);
+    }
+
     const unsubscribe = currentLevelIndex.subscribe(() => {
       boardKey++;
     });
@@ -35,7 +49,6 @@
     };
     document.addEventListener('show-wall-types', handleShowWallTypes);
 
-    // Горячая клавиша для открытия редактора
     const handleKeyDown = (e) => {
       if (e.ctrlKey && e.key === 'e') {
         e.preventDefault();
@@ -105,7 +118,6 @@
         {/key}
       </div>
 
-      <!-- Кнопка открытия редактора -->
       <button class="editor-toggle" on:click={toggleEditor} title="Open Level Editor (Ctrl+E)">
         🛠️
       </button>

@@ -1,6 +1,7 @@
 <!-- src/components/editor/GridEditor.svelte -->
 <script>
   import { getWallSVG } from '../../lib/engine/WallSVGs.js';
+  import { generateWalls, diffWalls } from '../../lib/engine/generateWalls.js';
   import { isDarkMode } from '../../lib/stores/gameStore.svelte.js';
 
   let {
@@ -16,7 +17,10 @@
     selectedWallType = 'L',
     selectedColor = 1,
     hoveredCell = null,
-    onEditCell
+    onEditCell,
+    // === НОВЫЕ ПРОПСЫ ===
+    showGenerated = false,   // показывать сгенерированный слой
+    showDiff = false,        // показывать расхождения
   } = $props();
 
   let isDark = false;
@@ -25,6 +29,37 @@
   let touchStartX = 0;
   let touchStartY = 0;
   let isSwiping = false;
+
+  // === ГЕНЕРАЦИЯ ===
+  let generatedWalls = $derived.by(() => {
+    if (!showGenerated && !showDiff) return null;
+    if (!objectsGrid?.length) return null;
+    try {
+      return generateWalls(objectsGrid, gridWidth, gridHeight);
+    } catch (e) {
+      console.warn('generateWalls error:', e);
+      return null;
+    }
+  });
+
+  // === РАСХОЖДЕНИЯ ===
+  let diffMatrix = $derived.by(() => {
+    if (!showDiff || !generatedWalls) return null;
+    return diffWalls(generatedWalls, wallsGrid);
+  });
+
+  // === СТАТИСТИКА ===
+  let stats = $derived.by(() => {
+    if (!diffMatrix) return null;
+    let total = 0, match = 0, mismatch = 0;
+    for (const row of diffMatrix) {
+      for (const v of row) {
+        total++;
+        if (v) match++; else mismatch++;
+      }
+    }
+    return { total, match, mismatch, accuracy: total > 0 ? match / total : 0 };
+  });
 
   function getWallSVGData(type) {
     const svg = getWallSVG(type, isDark, cellSize);
@@ -56,6 +91,16 @@
       return objectsGrid[rowIndex][colIndex] || 0;
     }
     return 0;
+  }
+
+  function getGeneratedWall(rowIndex, colIndex) {
+    if (!generatedWalls) return 'N';
+    return generatedWalls[rowIndex]?.[colIndex] || 'N';
+  }
+
+  function isDiff(rowIndex, colIndex) {
+    if (!diffMatrix) return false;
+    return !diffMatrix[rowIndex]?.[colIndex];
   }
 
   function isHovered(rowIndex, colIndex) {
@@ -109,7 +154,7 @@
     }
   }
 
-  function handleTouchEnd(e) {
+  function handleTouchEnd() {
     isSwiping = false;
   }
 
@@ -137,72 +182,154 @@
   const gridOffsetY = cellSize / 1.5;
 </script>
 
-<div 
-  class="editor-board"
-  class:mobile={isMobile}
-  style="--cell-size: {cellSize}px; width: {gridWidth * cellSize + 8}px; height: {gridHeight * cellSize + 8}px;"
-  on:mousedown={handlePointerDown}
-  on:mousemove={handlePointerMove}
-  on:mouseleave={handlePointerLeave}
-  on:touchstart={handleTouchStart}
-  on:touchmove={handleTouchMove}
-  on:touchend={handleTouchEnd}
->
+<div class="editor-wrapper">
+  <!-- ПАНЕЛЬ СТАТИСТИКИ -->
+  {#if stats}
+    <div class="stats-bar" class:dark={isDark}>
+      <span class="stats-label">Проверка:</span>
+      <span class="stats-value match">{stats.match} ✓</span>
+      <span class="stats-value mismatch">{stats.mismatch} ✗</span>
+      <span class="stats-value accuracy">
+        Точность: {(100 * stats.accuracy).toFixed(1)}%
+      </span>
+    </div>
+  {/if}
+
   <div 
-    class="grid-overlay"
-    class:visible={showGrid}
-    style="--cell-size: {cellSize}px;"
-  ></div>
+    class="editor-board"
+    class:mobile={isMobile}
+    style="--cell-size: {cellSize}px; width: {gridWidth * cellSize + 8}px; height: {gridHeight * cellSize + 8}px;"
+    on:mousedown={handlePointerDown}
+    on:mousemove={handlePointerMove}
+    on:mouseleave={handlePointerLeave}
+    on:touchstart={handleTouchStart}
+    on:touchmove={handleTouchMove}
+    on:touchend={handleTouchEnd}
+  >
+    <div 
+      class="grid-overlay"
+      class:visible={showGrid}
+      style="--cell-size: {cellSize}px;"
+    ></div>
 
-  {#each wallsGrid as row, rowIndex}
-    {#each row as wall, colIndex}
-      {@const obj = getObj(rowIndex, colIndex)}
-      {@const hover = isHovered(rowIndex, colIndex)}
-      <div 
-        class="cell"
-        class:mobile={isMobile}
-        class:hover={hover}
-        class:erasing={isErasing}
-        style="left: {colIndex * cellSize + 4}px; top: {rowIndex * cellSize + 4}px; width: {cellSize}px; height: {cellSize}px;"
-      >
-        <!-- Стена -->
-        {#if wall !== 'N'}
-          <div class="wall-display">
-            {@html getWallSVGData(wall)}
-          </div>
-        {/if}
+    {#each wallsGrid as row, rowIndex}
+      {#each row as wall, colIndex}
+        {@const obj = getObj(rowIndex, colIndex)}
+        {@const hover = isHovered(rowIndex, colIndex)}
+        {@const generated = getGeneratedWall(rowIndex, colIndex)}
+        {@const hasDiff = showDiff && isDiff(rowIndex, colIndex)}
+        
+        <div 
+          class="cell"
+          class:mobile={isMobile}
+          class:hover={hover}
+          class:erasing={isErasing}
+          class:has-diff={hasDiff}
+          style="left: {colIndex * cellSize + 4}px; top: {rowIndex * cellSize + 4}px; width: {cellSize}px; height: {cellSize}px;"
+        >
+          <!-- Нарисованная стена -->
+          {#if wall !== 'N'}
+            <div class="wall-display">
+              {@html getWallSVGData(wall)}
+            </div>
+          {/if}
 
-        <!-- Объект -->
-        {#if obj && obj !== 0}
-          <div 
-            class="object-display"
-            class:ball={obj >= 2 && obj <= 7}
-            class:hole={obj >= 22 && obj <= 77}
-            class:block={obj === 1}
-            class:mobile={isMobile}
-            style="
-              left: {gridOffsetX}px;
-              top: {gridOffsetY}px;
-              width: {cellSize}px;
-              height: {cellSize}px;
-              background: {getObjectColor(obj) || 'transparent'};
-            "
-          >
-            {#if obj >= 2 && obj <= 7}
-              <span class="obj-label">{obj - 1}</span>
-            {:else if obj >= 22 && obj <= 77}
-              <span class="obj-label">{Math.floor(obj / 11)}</span>
-            {:else if obj === 1}
-              <span>█</span>
-            {/if}
-          </div>
-        {/if}
-      </div>
+          <!-- Сгенерированная стена (полупрозрачно) -->
+          {#if showGenerated && generated !== 'N' && wall === 'N'}
+            <div class="wall-display generated">
+              {@html getWallSVGData(generated)}
+            </div>
+          {/if}
+
+          <!-- Индикатор расхождения -->
+          {#if hasDiff}
+            <div class="diff-indicator"></div>
+          {/if}
+
+          <!-- Объект -->
+          {#if obj && obj !== 0}
+            <div 
+              class="object-display"
+              class:ball={obj >= 2 && obj <= 7}
+              class:hole={obj >= 22 && obj <= 77}
+              class:block={obj === 1}
+              class:mobile={isMobile}
+              style="
+                left: {gridOffsetX}px;
+                top: {gridOffsetY}px;
+                width: {cellSize}px;
+                height: {cellSize}px;
+                background: {getObjectColor(obj) || 'transparent'};
+              "
+            >
+              {#if obj >= 2 && obj <= 7}
+                <span class="obj-label">{obj - 1}</span>
+              {:else if obj >= 22 && obj <= 77}
+                <span class="obj-label">{Math.floor(obj / 11)}</span>
+              {:else if obj === 1}
+                <span>█</span>
+              {/if}
+            </div>
+          {/if}
+        </div>
+      {/each}
     {/each}
-  {/each}
+  </div>
 </div>
 
 <style>
+  .editor-wrapper {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    align-items: center;
+  }
+
+  /* === СТАТИСТИКА === */
+  .stats-bar {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    padding: 6px 12px;
+    background: rgba(80, 66, 125, 0.08);
+    border-radius: 8px;
+    font-size: 12px;
+    font-weight: 600;
+  }
+
+  .stats-bar.dark {
+    background: rgba(217, 200, 251, 0.08);
+  }
+
+  .stats-label {
+    color: #50427D;
+    opacity: 0.7;
+  }
+
+  .stats-bar.dark .stats-label {
+    color: #d9c8fb;
+  }
+
+  .stats-value {
+    font-family: monospace;
+  }
+
+  .stats-value.match {
+    color: #34C759;
+  }
+
+  .stats-value.mismatch {
+    color: #FF3B30;
+  }
+
+  .stats-value.accuracy {
+    color: #50427D;
+  }
+
+  .stats-bar.dark .stats-value.accuracy {
+    color: #d9c8fb;
+  }
+
   .editor-board {
     position: relative;
     background: #50427d;
@@ -272,6 +399,26 @@
     background: rgba(255,59,48,0.15);
   }
 
+  /* === РАСХОЖДЕНИЕ === */
+  .cell.has-diff {
+    background: rgba(255, 59, 48, 0.15);
+  }
+
+  .cell.has-diff::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border: 2px solid rgba(255, 59, 48, 0.7);
+    border-radius: 2px;
+    pointer-events: none;
+    animation: pulse-diff 1.5s ease-in-out infinite;
+  }
+
+  @keyframes pulse-diff {
+    0%, 100% { opacity: 0.6; }
+    50% { opacity: 1; }
+  }
+
   .wall-display {
     position: absolute;
     top: 0;
@@ -291,6 +438,12 @@
     max-width: 100%;
     max-height: 100%;
     display: block;
+  }
+
+  /* Сгенерированные стены — полупрозрачные */
+  .wall-display.generated {
+    opacity: 0.4;
+    filter: hue-rotate(180deg);
   }
 
   .object-display {

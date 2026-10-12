@@ -1,0 +1,4 @@
+aws configure --profile vkcloud
+aws s3 ls --profile vkcloud --endpoint-url https://hb.ru-msk.vkcloud-storage.ru
+aws --profile vkcloud --endpoint-url https://hb.ru-msk.vkcloud-storage.ru s3api put-bucket-acl --bucket ball-puzzle --acl public-read
+aws --profile vkcloud --endpoint-url https://hb.ru-msk.vkcloud-storage.ru s3 ls

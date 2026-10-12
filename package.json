@@ -7,12 +7,13 @@
     "dev": "vite",
     "build": "vite build",
     "deploy-vk": "node deploy-vk.js",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test:levels": "node test-generator.mjs"
   },
   "devDependencies": {
-    "@sveltejs/vite-plugin-svelte": "7.2.0",
-    "svelte": "5.56.6",
-    "vite": "8.1.5",
+    "@sveltejs/vite-plugin-svelte": "7.3.1",
+    "svelte": "5.57.2",
+    "vite": "8.3.3",
     "vite-plugin-compress": "^2.1.1",
     "vite-plugin-compression2": "^2.5.3"
   },

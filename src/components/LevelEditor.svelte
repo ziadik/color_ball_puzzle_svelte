@@ -8,6 +8,7 @@
   import LayerPanel from './editor/LayerPanel.svelte';
   import GridEditor from './editor/GridEditor.svelte';
   import JsonModal from './editor/JsonModal.svelte';
+  import { generateWalls, diffWalls } from '../lib/engine/generateWalls.js';
 
   // --- Состояние редактора ---
   let isDark = false;
@@ -37,6 +38,45 @@
   let previewContainerHeight = $state(400);
   let previewContainer = $state(null);
   
+  // Визуализация проверки
+  let showGenerated = $state(false);
+  let showDiff = $state(false);
+
+  // Автоматически вычисляемые walls из objects
+  let generatedWalls = $derived.by(() => {
+    if (!objectsGrid?.length || gridWidth === 0 || gridHeight === 0) return null;
+    try {
+      return generateWalls(objectsGrid, gridWidth, gridHeight);
+    } catch (e) {
+      console.warn('generateWalls error:', e);
+      return null;
+    }
+  });
+
+  // Расхождения
+  let diffMatrix = $derived.by(() => {
+    if (!generatedWalls) return null;
+    return diffWalls(generatedWalls, wallsGrid);
+  });
+
+  // Статистика
+  let stats = $derived.by(() => {
+    if (!diffMatrix) return null;
+    let total = 0, match = 0;
+    for (const row of diffMatrix) {
+      for (const v of row) {
+        total++;
+        if (v) match++;
+      }
+    }
+    return {
+      total,
+      match,
+      mismatch: total - match,
+      accuracy: total > 0 ? match / total : 1,
+    };
+  });
+
   // Мобильная оптимизация
   let isMobile = $state(false);
 
@@ -207,6 +247,8 @@
     if (e.key === '5') { isErasing = !isErasing; }
     if (e.key === 'j') { showJsonModal = !showJsonModal; }
     if (e.key === 'l') { showLayerPanel = !showLayerPanel; }
+    if (e.key === 'g') { showGenerated = !showGenerated; }
+    if (e.key === 'd') { showDiff = !showDiff; }
   }
 
   // --- Редактирование ---
@@ -238,7 +280,7 @@
       ensureObjectSize(row, col);
       const newObjects = [...objectsGrid];
       newObjects[row] = [...newObjects[row]];
-      newObjects[row][col] = selectedColor * 11 + 11;
+      newObjects[row][col] = selectedColor * 11;
       objectsGrid = newObjects;
     } else if (selectedTool === 'block') {
       ensureObjectSize(row, col);
@@ -259,6 +301,13 @@
       newObjects[row] = [...newObjects[row], 0];
     }
     objectsGrid = newObjects;
+  }
+
+  // --- Применить сгенерированные walls ---
+  function applyGenerated() {
+    if (!generatedWalls) return;
+    wallsGrid = generatedWalls.map(row => [...row]);
+    saveHistory();
   }
 
   // --- Получение JSON ---
@@ -745,6 +794,42 @@
     </div>
   </div>
 
+  <!-- Панель проверки -->
+  <div class="check-panel" class:mobile={isMobile} class:dark={isDark}>
+    <label class="check-toggle">
+      <input 
+        type="checkbox" 
+        bind:checked={showGenerated}
+      />
+      <span>Сгенерированные</span>
+    </label>
+    
+    <label class="check-toggle">
+      <input 
+        type="checkbox" 
+        bind:checked={showDiff}
+      />
+      <span>Расхождения</span>
+    </label>
+    
+    <button 
+      class="check-btn" 
+      on:click={applyGenerated}
+      disabled={!generatedWalls}
+      title="Применить сгенерированные стены"
+    >
+      ⚡ Применить
+    </button>
+    
+    {#if stats}
+      <span class="check-stats">
+        <span class="stat-match">{stats.match}✓</span>
+        <span class="stat-mismatch">{stats.mismatch}✗</span>
+        <span class="stat-acc">{(100 * stats.accuracy).toFixed(1)}%</span>
+      </span>
+    {/if}
+  </div>
+
   <!-- Панель слоев -->
   {#if showLayerPanel}
     <LayerPanel 
@@ -803,6 +888,8 @@
       {selectedColor}
       bind:hoveredCell
       onEditCell={editCell}
+      {showGenerated}
+      {showDiff}
     />
   {:else}
     <div class="preview-container" bind:this={previewContainer}>
@@ -926,6 +1013,97 @@
   .icon-btn:disabled {
     opacity: 0.3;
     cursor: not-allowed;
+  }
+
+  /* === ПАНЕЛЬ ПРОВЕРКИ === */
+  .check-panel {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 5px 12px;
+    background: rgba(80,66,125,0.06);
+    border-radius: 8px;
+    width: 100%;
+    flex-wrap: wrap;
+    font-size: 12px;
+    box-sizing: border-box;
+  }
+
+  .check-panel.dark {
+    background: rgba(217,200,251,0.06);
+  }
+
+  .check-panel.mobile {
+    padding: 4px 8px;
+    gap: 6px;
+    font-size: 11px;
+  }
+
+  .check-toggle {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    color: #50427d;
+    cursor: pointer;
+    user-select: none;
+    white-space: nowrap;
+  }
+
+  .dark .check-toggle {
+    color: #d9c8fb;
+  }
+
+  .check-toggle input {
+    cursor: pointer;
+    margin: 0;
+    accent-color: #722FC0;
+  }
+
+  .check-btn {
+    padding: 4px 10px;
+    border: none;
+    border-radius: 5px;
+    background: linear-gradient(135deg, #722FC0, #8F5CEC);
+    color: white;
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: opacity 0.15s;
+    white-space: nowrap;
+  }
+
+  .check-btn:hover:not(:disabled) {
+    opacity: 0.9;
+  }
+
+  .check-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+
+  .check-stats {
+    margin-left: auto;
+    display: flex;
+    gap: 8px;
+    font-family: monospace;
+    font-weight: 600;
+    font-size: 12px;
+  }
+
+  .stat-match {
+    color: #34C759;
+  }
+
+  .stat-mismatch {
+    color: #FF3B30;
+  }
+
+  .stat-acc {
+    color: #50427d;
+  }
+
+  .dark .stat-acc {
+    color: #d9c8fb;
   }
 
   .mode-switch {
@@ -1066,6 +1244,22 @@
     .grid-size-label {
       font-size: 10px;
     }
+    
+    .check-panel {
+      padding: 3px 6px;
+      gap: 5px;
+      font-size: 10px;
+    }
+    
+    .check-btn {
+      padding: 3px 8px;
+      font-size: 10px;
+    }
+    
+    .check-stats {
+      font-size: 10px;
+      gap: 5px;
+    }
   }
 
   @media (max-width: 480px) {
@@ -1097,6 +1291,25 @@
     
     .grid-size-label {
       font-size: 8px;
+    }
+    
+    .check-panel {
+      padding: 2px 4px;
+      gap: 4px;
+      font-size: 9px;
+    }
+    
+    .check-toggle span {
+      display: none;
+    }
+    
+    .check-toggle::after {
+      content: '⚙';
+    }
+    
+    .check-stats {
+      font-size: 9px;
+      gap: 3px;
     }
   }
 </style>

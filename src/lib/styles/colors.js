@@ -15,7 +15,7 @@ export const Colors = {
 
   // MARK: - Цвета стен
   Walls: {
-    light: (isDark) => (isDark ? "#413C50" : "#F8F4FF"),
+    light: (isDark) => (isDark ? "#363344" : "#F8F4FF"),
     accent: (isDark) => (isDark ? "#A69DD4" : "#8889B6"),
     shadow: (isDark) => (isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.2)"),
   },

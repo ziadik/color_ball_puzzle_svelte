@@ -82,8 +82,22 @@ export function makeMove(x, y, direction) {
     if (currentEngine.isWin()) {
       isWin.set(true);
       showWinModal.set(true);
-      if (levelManager.currentLevelIndex + 1 > maxOpenedLevel) {
-        maxOpenedLevel.set(levelManager.currentLevelIndex + 1);
+
+      // Обновляем прогресс
+      let currentMax = 0;
+      maxOpenedLevel.subscribe((v) => (currentMax = v))();
+
+      const newMax = Math.max(currentMax, levelManager.currentLevelIndex + 1);
+      if (newMax > currentMax) {
+        maxOpenedLevel.set(newMax);
+
+        // Сохраняем в VK Storage
+        import("../services/vkBridge.js").then(({ vkBridge }) => {
+          vkBridge.setStorage("progress", {
+            maxOpenedLevel: newMax,
+            editorUnlocked: newMax > 60,
+          });
+        });
       }
     }
     fieldEngine.set(currentEngine);

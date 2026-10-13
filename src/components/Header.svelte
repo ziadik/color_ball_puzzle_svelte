@@ -1,3 +1,4 @@
+<!-- src/components/Header.svelte -->
 <script>
   import { 
     currentLevelIndex, 
@@ -12,35 +13,26 @@
     movesCount,
     isDarkMode
   } from '../lib/stores/gameStore.svelte.js';
+  import { editorUnlocked, openEditor } from '../lib/stores/appStore.svelte.js';
   import { soundManager } from '../lib/utils/sound.js';
-  import { Colors } from '../lib/styles/colors.js';
 
   let isDark = false;
   let moves = 0;
   
   isDarkMode.subscribe(value => isDark = value);
   movesCount.subscribe(value => moves = value);
-
-  function showWallTypes() {
-    const event = new CustomEvent('show-wall-types');
-    document.dispatchEvent(event);
-  }
 </script>
 
 <header 
   class="header" 
   class:dark={isDark}
   style="
-    background: ${isDark ? 'rgba(45, 35, 75, 0.92)' : 'rgba(255,255,255,0.85)'};
-    box-shadow: ${isDark ? '0 2px 12px rgba(0,0,0,0.3)' : '0 2px 12px rgba(0,0,0,0.06)'};
+    background: {isDark ? 'rgba(45, 35, 75, 0.92)' : 'rgba(255,255,255,0.85)'};
+    box-shadow: {isDark ? '0 2px 12px rgba(0,0,0,0.3)' : '0 2px 12px rgba(0,0,0,0.06)'};
   "
 >
   <div class="header-left">
-    <button 
-      class="icon-btn" 
-      on:click={restartLevel}
-      aria-label="Restart"
-    >
+    <button class="icon-btn" on:click={restartLevel} aria-label="Restart" title="Заново">
       <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
         <path d="M3 12a9 9 0 1 0 9-9m0 0v6m0-6h-6" stroke-linecap="round" stroke-linejoin="round"/>
       </svg>
@@ -51,6 +43,7 @@
       on:click={undoMove}
       disabled={moves === 0}
       aria-label="Undo"
+      title="Отменить"
     >
       <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
         <path d="M3 7v6h6" stroke-linecap="round" stroke-linejoin="round"/>
@@ -72,6 +65,7 @@
         if (hint) soundManager.playMove();
       }}
       aria-label="Hint"
+      title="Подсказка"
     >
       <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
         <circle cx="12" cy="12" r="10"/>
@@ -80,25 +74,23 @@
       </svg>
     </button>
 
-    <button 
-      class="icon-btn" 
-      on:click={showWallTypes}
-      aria-label="Wall Types Reference"
-      title="Wall Types Reference"
-    >
-      <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
-        <rect x="3" y="3" width="7" height="7" rx="1"/>
-        <rect x="14" y="3" width="7" height="7" rx="1"/>
-        <rect x="3" y="14" width="7" height="7" rx="1"/>
-        <rect x="14" y="14" width="7" height="7" rx="1"/>
-      </svg>
-    </button>
+    {#if $editorUnlocked}
+      <button 
+        class="icon-btn editor-btn" 
+        on:click={openEditor}
+        aria-label="Editor"
+        title="Редактор уровней"
+      >
+        🎨
+      </button>
+    {/if}
 
     <button 
       class="icon-btn" 
       on:click={previousLevel}
       disabled={$currentLevelIndex === 0}
       aria-label="Previous level"
+      title="Предыдущий"
     >
       <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
         <path d="M15 19l-7-7 7-7" stroke-linecap="round" stroke-linejoin="round"/>
@@ -110,6 +102,7 @@
       on:click={nextLevel}
       disabled={$currentLevelIndex >= $totalLevels - 1}
       aria-label="Next level"
+      title="Следующий"
     >
       <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
         <path d="M9 5l7 7-7 7" stroke-linecap="round" stroke-linejoin="round"/>
@@ -120,6 +113,7 @@
       class="icon-btn" 
       on:click={toggleSettings}
       aria-label="Settings"
+      title="Настройки"
     >
       <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
         <circle cx="12" cy="12" r="3"/>
@@ -136,18 +130,12 @@
     justify-content: space-between;
     gap: 8px;
     padding: 10px 16px;
-    background: rgba(255, 255, 255, 0.85);
     backdrop-filter: blur(12px);
     border-radius: 18px;
-    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
     width: 100%;
     max-width: 520px;
     transition: background 0.3s ease;
-  }
-
-  .header.dark {
-    background: rgba(45, 35, 75, 0.92);
-    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.3);
+    box-sizing: border-box;
   }
 
   .header-left, .header-right {
@@ -169,6 +157,7 @@
     cursor: pointer;
     transition: all 0.15s ease;
     flex-shrink: 0;
+    font-size: 18px;
   }
 
   .dark .icon-btn {
@@ -190,6 +179,14 @@
 
   .icon-btn:active:not(:disabled) {
     transform: scale(0.9);
+  }
+
+  .editor-btn {
+    background: rgba(114, 47, 192, 0.08);
+  }
+
+  .dark .editor-btn {
+    background: rgba(217, 200, 251, 0.08);
   }
 
   .level-display {
@@ -232,6 +229,7 @@
     .icon-btn {
       width: 32px;
       height: 32px;
+      font-size: 16px;
     }
 
     .level-label {

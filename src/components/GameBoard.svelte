@@ -458,10 +458,10 @@
   }
 
   .board {
-    background: #50427d;
+    background: #363344;
   }
   .board.dark {
-    background: #2d234b;
+    background: #363344;
   }
 
   .board-background {

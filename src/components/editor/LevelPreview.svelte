@@ -1,10 +1,10 @@
 <!-- src/components/editor/LevelPreview.svelte -->
 <script>
-  import { colorToCss } from '../../lib/models/GameColor.js';
-  import { getWallSVG } from '../../lib/engine/WallSVGs.js';
-  import { generateWalls } from '../../lib/engine/generateWalls.js';
-  import { getWallLayer } from '../../lib/models/WallType.js';
-  import { isDarkMode } from '../../lib/stores/gameStore.svelte.js';
+  import { colorToCss } from "../../lib/models/GameColor.js";
+  import { getWallSVG } from "../../lib/engine/WallSVGs.js";
+  import { generateWalls } from "../../lib/engine/generateWalls.js";
+  import { getWallLayer } from "../../lib/models/WallType.js";
+  import { isDarkMode } from "../../lib/stores/gameStore.svelte.js";
 
   let {
     objectsGrid = [],
@@ -14,7 +14,7 @@
 
   // === ТЕМА ===
   let isDark = false;
-  isDarkMode.subscribe(v => isDark = v);
+  isDarkMode.subscribe((v) => (isDark = v));
 
   // === ТУМБЛЕР СТЕН ===
   let showWalls = $state(false);
@@ -27,7 +27,7 @@
     try {
       return generateWalls(objectsGrid, W, H);
     } catch (e) {
-      console.warn('generateWalls error:', e);
+      console.warn("generateWalls error:", e);
       return [];
     }
   });
@@ -48,8 +48,8 @@
   const boardH = $derived(cellSize * rows);
 
   // === ЦВЕТА ===
-  const wallColor = $derived(isDark ? '#413C50' : '#F8F4FF');
-  const boardBg = $derived(isDark ? '#2D234B' : '#50427D');
+  const wallColor = $derived(isDark ? "#413C50" : "#F8F4FF");
+  const boardBg = $derived(isDark ? "#2D234B" : "#50427D");
 
   // === СТЕНЫ ПО СЛОЯМ ===
   const wallsBottom = $derived.by(() => {
@@ -57,7 +57,7 @@
     for (let y = 0; y < wallsGrid.length; y++) {
       for (let x = 0; x < wallsGrid[y]?.length; x++) {
         const t = wallsGrid[y][x];
-        if (t && t !== 'N' && getWallLayer(t) === 'bottom') {
+        if (t && t !== "N" && getWallLayer(t) === "bottom") {
           result.push({ x, y, wallType: t });
         }
       }
@@ -70,7 +70,7 @@
     for (let y = 0; y < wallsGrid.length; y++) {
       for (let x = 0; x < wallsGrid[y]?.length; x++) {
         const t = wallsGrid[y][x];
-        if (t && t !== 'N' && getWallLayer(t) === 'top') {
+        if (t && t !== "N" && getWallLayer(t) === "top") {
           result.push({ x, y, wallType: t });
         }
       }
@@ -80,9 +80,9 @@
 
   // === OBJECTS ===
   function typeOf(v) {
-    if (v >= 2 && v <= 7) return 'ball';
-    if (v >= 22 && v <= 77) return 'hole';
-    if (v === 1) return 'block';
+    if (v >= 2 && v <= 7) return "ball";
+    if (v >= 22 && v <= 77) return "hole";
+    if (v === 1) return "block";
     return null;
   }
 
@@ -98,26 +98,22 @@
 
   // === СМЕНА ТЕМЫ (глобальная) ===
   function toggleTheme() {
-    isDarkMode.update(v => !v);
+    isDarkMode.update((v) => !v);
   }
 </script>
 
-<div class="wrapper" style="background: {wallColor};">
+<div class="wrapper" class:dark={isDark}>
   <div class="controls">
     <button
       class="toggle-btn"
       class:dark={isDark}
-      on:click={() => showWalls = !showWalls}
+      on:click={() => (showWalls = !showWalls)}
     >
-      {showWalls ? '👁️ Скрыть стены' : '🧱 Показать стены'}
+      {showWalls ? "👁️ Скрыть стены" : "🧱 Показать стены"}
     </button>
 
-    <button
-      class="toggle-btn"
-      class:dark={isDark}
-      on:click={toggleTheme}
-    >
-      {isDark ? '☀️ Светлая' : '🌙 Тёмная'}
+    <button class="toggle-btn" class:dark={isDark} on:click={toggleTheme}>
+      {isDark ? "☀️ Светлая" : "🌙 Тёмная"}
     </button>
   </div>
 
@@ -135,7 +131,7 @@
         <!-- Слой 2: стены bottom (под объектами) -->
         {#if showWalls}
           <div class="layer walls-bottom">
-            {#each wallsBottom as { x, y, wallType } (x + '-' + y + '-b')}
+            {#each wallsBottom as { x, y, wallType } (x + "-" + y + "-b")}
               <div
                 class="wall-cell"
                 style="
@@ -157,7 +153,7 @@
             {#each row as v, x}
               {@const t = typeOf(v)}
               {#if t}
-                {#if !(showWalls && t === 'block')}
+                {#if !(showWalls && t === "block")}
                   <div
                     class="cell"
                     style="
@@ -167,14 +163,27 @@
                       height: {cellSize}px;
                     "
                   >
-                    {#if t === 'ball'}
-                      <div class="ball" style="width: {cellSize}px; height: {cellSize}px; background: {colorOf(v)};">
+                    {#if t === "ball"}
+                      <div
+                        class="ball"
+                        style="width: {cellSize}px; height: {cellSize}px; background: {colorOf(
+                          v,
+                        )};"
+                      >
                         <div class="ball-hl"></div>
                       </div>
-                    {:else if t === 'hole'}
-                      <div class="hole" style="width: {cellSize}px; height: {cellSize}px; border-color: {colorOf(v)};"></div>
-                    {:else if t === 'block'}
-                      <div class="block" style="width: {cellSize}px; height: {cellSize}px;"></div>
+                    {:else if t === "hole"}
+                      <div
+                        class="hole"
+                        style="width: {cellSize}px; height: {cellSize}px; border-color: {colorOf(
+                          v,
+                        )};"
+                      ></div>
+                    {:else if t === "block"}
+                      <div
+                        class="block"
+                        style="width: {cellSize}px; height: {cellSize}px;"
+                      ></div>
                     {/if}
                   </div>
                 {/if}
@@ -186,7 +195,7 @@
         <!-- Слой 4: стены top (над объектами) -->
         {#if showWalls}
           <div class="layer walls-top">
-            {#each wallsTop as { x, y, wallType } (x + '-' + y + '-t')}
+            {#each wallsTop as { x, y, wallType } (x + "-" + y + "-t")}
               <div
                 class="wall-cell"
                 style="
@@ -211,13 +220,19 @@
     display: flex;
     flex-direction: column;
     align-items: center;
+    justify-content: center;
     gap: 8px;
     width: 100%;
     height: 100%;
+    padding: 8px;
     box-sizing: border-box;
     transition: background 0.3s ease;
+    overflow: hidden;
+    background: transparent;
   }
-
+  .wrapper.dark {
+    background: transparent;
+  }
   .controls {
     display: flex;
     gap: 8px;
@@ -274,15 +289,19 @@
     inset: 0;
     pointer-events: none;
     z-index: 1;
-    background-image:
-      linear-gradient(rgba(59, 45, 104, 0.4) 1px, transparent 1px),
+    background-image: linear-gradient(
+        rgba(59, 45, 104, 0.4) 1px,
+        transparent 1px
+      ),
       linear-gradient(90deg, rgba(59, 45, 104, 0.4) 1px, transparent 1px);
     background-size: var(--cell) var(--cell);
   }
 
   .grid.dark {
-    background-image:
-      linear-gradient(rgba(100, 86, 145, 0.3) 1px, transparent 1px),
+    background-image: linear-gradient(
+        rgba(100, 86, 145, 0.3) 1px,
+        transparent 1px
+      ),
       linear-gradient(90deg, rgba(100, 86, 145, 0.3) 1px, transparent 1px);
   }
 
@@ -292,9 +311,15 @@
     pointer-events: none;
   }
 
-  .walls-bottom { z-index: 2; }
-  .objects { z-index: 3; }
-  .walls-top { z-index: 4; }
+  .walls-bottom {
+    z-index: 2;
+  }
+  .objects {
+    z-index: 3;
+  }
+  .walls-top {
+    z-index: 4;
+  }
 
   .wall-cell {
     position: absolute;
@@ -326,8 +351,10 @@
 
   .ball-hl {
     position: absolute;
-    top: 15%; left: 20%;
-    width: 25%; height: 20%;
+    top: 15%;
+    left: 20%;
+    width: 25%;
+    height: 20%;
     border-radius: 50%;
     background: rgba(255, 255, 255, 0.5);
   }

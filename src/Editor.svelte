@@ -43,13 +43,13 @@
     height: 100%;
     max-width: 1000px;
     max-height: 900px;
-    background: #F8F4FF;
+     background: transparent;
     border-radius: 16px;
     overflow: hidden;
   }
 
   .editor-screen.dark {
-    background: #363344;
+     background: transparent;
   }
 
   .editor-top-bar {
@@ -57,13 +57,13 @@
     align-items: center;
     gap: 12px;
     padding: 12px 16px;
-    background: rgba(255, 255, 255, 0.7);
+    /* background: rgba(255, 255, 255, 0.7); */
     border-bottom: 1px solid rgba(80, 66, 125, 0.08);
     flex-shrink: 0;
   }
 
   .editor-screen.dark .editor-top-bar {
-    background: rgba(45, 35, 75, 0.7);
+    /* background: rgba(45, 35, 75, 0.7); */
     border-bottom: 1px solid rgba(217, 200, 251, 0.08);
   }
 
@@ -85,7 +85,7 @@
   }
 
   .editor-screen.dark .back-btn {
-    background: rgba(217, 200, 251, 0.08);
+    /* background: rgba(217, 200, 251, 0.08); */
     color: #d9c8fb;
   }
 

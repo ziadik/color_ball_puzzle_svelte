@@ -4,9 +4,7 @@
   import LevelEditor from './components/LevelEditor.svelte';
   import { closeEditor } from './lib/stores/appStore.svelte.js';
   import { isDarkMode } from './lib/stores/gameStore.svelte.js';
-
-  let isDark = $state(false);
-  isDarkMode.subscribe(v => isDark = v);
+  import { Colors } from './lib/styles/colors.js';
 
   function handleBack() {
     closeEditor();
@@ -21,15 +19,18 @@
   });
 </script>
 
-<div class="editor-screen" class:dark={isDark}>
-  <div class="editor-top-bar">
-    <button class="back-btn" on:click={handleBack}>
+<div class="editor-screen">
+  <div
+    class="editor-top-bar"
+    style="border-bottom-color: {Colors.Grid.grid($isDarkMode)};"
+  >
+    <button class="back-btn" class:dark={$isDarkMode} on:click={handleBack}>
       ← Назад
     </button>
-    <h1 class="editor-title">🎨 Редактор уровней</h1>
+    <h1 class="editor-title" class:dark={$isDarkMode}>🎨 Редактор уровней</h1>
     <div class="spacer"></div>
   </div>
-  
+
   <div class="editor-content">
     <LevelEditor />
   </div>
@@ -43,13 +44,9 @@
     height: 100%;
     max-width: 1000px;
     max-height: 900px;
-     background: transparent;
+    background: transparent;
     border-radius: 16px;
     overflow: hidden;
-  }
-
-  .editor-screen.dark {
-     background: transparent;
   }
 
   .editor-top-bar {
@@ -57,14 +54,8 @@
     align-items: center;
     gap: 12px;
     padding: 12px 16px;
-    /* background: rgba(255, 255, 255, 0.7); */
-    border-bottom: 1px solid rgba(80, 66, 125, 0.08);
+    border-bottom: 1px solid transparent;
     flex-shrink: 0;
-  }
-
-  .editor-screen.dark .editor-top-bar {
-    /* background: rgba(45, 35, 75, 0.7); */
-    border-bottom: 1px solid rgba(217, 200, 251, 0.08);
   }
 
   .back-btn {
@@ -84,9 +75,13 @@
     background: rgba(80, 66, 125, 0.14);
   }
 
-  .editor-screen.dark .back-btn {
-    /* background: rgba(217, 200, 251, 0.08); */
+  .back-btn.dark {
+    background: rgba(217, 200, 251, 0.08);
     color: #d9c8fb;
+  }
+
+  .back-btn.dark:hover {
+    background: rgba(217, 200, 251, 0.14);
   }
 
   .editor-title {
@@ -96,7 +91,7 @@
     margin: 0;
   }
 
-  .editor-screen.dark .editor-title {
+  .editor-title.dark {
     color: #d9c8fb;
   }
 
@@ -106,5 +101,8 @@
     flex: 1;
     overflow-y: auto;
     padding: 12px;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
   }
 </style>

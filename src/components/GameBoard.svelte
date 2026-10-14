@@ -1,6 +1,6 @@
 <!-- src/components/GameBoard.svelte -->
 <script>
-  import { colorToCss } from '../lib/models/GameColor.js';
+  import { Colors } from '../lib/styles/colors.js';
   import WallSVG from './WallSVG.svelte';
   import {
     fieldEngine,
@@ -366,7 +366,7 @@
                 top: {y * cellSize + gridOffsetY}px;
                 width: {cellSize}px;
                 height: {cellSize}px;
-                border-color: {colorToCss(item.color, isDark)};
+                border-color: {Colors.ballColor(item.color)};
               "
             >
               <div class="hole-inner"></div>
@@ -403,7 +403,7 @@
                 top: {y * cellSize + gridOffsetY}px;
                 width: {cellSize}px;
                 height: {cellSize}px;
-                background: {colorToCss(item.color, isDark)};
+                background: {Colors.ballColor(item.color)};
               "
             >
               <div class="ball-highlight"></div>

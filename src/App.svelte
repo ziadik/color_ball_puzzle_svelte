@@ -6,13 +6,7 @@
   import Editor from './Editor.svelte';
   import { isEditorOpen, loadProgress } from './lib/stores/appStore.svelte.js';
   import { isDarkMode } from './lib/stores/gameStore.svelte.js';
-
-  let isDark = $state(false);
-
-  isDarkMode.subscribe(value => {
-    isDark = value;
-    document.documentElement.classList.toggle('dark', value);
-  });
+  import { Colors } from './lib/styles/colors.js';
 
   onMount(async () => {
     await vkBridge.init();
@@ -21,10 +15,19 @@
       setTimeout(() => vkBridge.hideLoading(), 1000);
     }
     await loadProgress();
+
+    // Синхронизация <html> с темой
+    const unsub = isDarkMode.subscribe(v => {
+      document.documentElement.classList.toggle('dark', v);
+    });
+    return unsub;
   });
 </script>
 
-<div class="app" class:dark={isDark}>
+<div
+  class="app"
+  style="background: {Colors.Background.appBackground($isDarkMode)};"
+>
   {#if $isEditorOpen}
     <Editor />
   {:else}
@@ -40,13 +43,9 @@
     align-items: center;
     justify-content: center;
     padding: 12px;
-    background: #F8F4FF;
-    transition: background 0.3s ease;
+    /* transition: background 0.3s ease; */
     overflow: hidden;
-  }
-
-  .app.dark {
-    background: #363344;
+    box-sizing: border-box;
   }
 
   @media (max-width: 480px) {

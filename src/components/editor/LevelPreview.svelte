@@ -1,10 +1,11 @@
 <!-- src/components/editor/LevelPreview.svelte -->
 <script>
-  import { colorToCss } from "../../lib/models/GameColor.js";
   import { getWallSVG } from "../../lib/engine/WallSVGs.js";
   import { generateWalls } from "../../lib/engine/generateWalls.js";
   import { getWallLayer } from "../../lib/models/WallType.js";
   import { isDarkMode } from "../../lib/stores/gameStore.svelte.js";
+  import { showWalls, toggleWalls } from "../../lib/stores/editorStore.svelte.js";
+  import { Colors } from "../../lib/styles/colors.js";
 
   let {
     objectsGrid = [],
@@ -12,14 +13,7 @@
     containerHeight = 400,
   } = $props();
 
-  // === ТЕМА ===
-  let isDark = false;
-  isDarkMode.subscribe((v) => (isDark = v));
-
-  // === ТУМБЛЕР СТЕН ===
-  let showWalls = $state(false);
-
-  // === ГЕНЕРАЦИЯ WALLS ИЗ OBJECTS ===
+  // === ГЕНЕРАЦИЯ WALLS ===
   const wallsGrid = $derived.by(() => {
     if (!objectsGrid?.length) return [];
     const W = (objectsGrid[0]?.length || 0) + 1;
@@ -32,7 +26,6 @@
     }
   });
 
-  // === РАЗМЕРЫ (по walls) ===
   const cols = $derived(wallsGrid[0]?.length || 0);
   const rows = $derived(wallsGrid.length || 0);
 
@@ -47,11 +40,6 @@
   const boardW = $derived(cellSize * cols);
   const boardH = $derived(cellSize * rows);
 
-  // === ЦВЕТА ===
-  const wallColor = $derived(isDark ? "#413C50" : "#F8F4FF");
-  const boardBg = $derived(isDark ? "#2D234B" : "#50427D");
-
-  // === СТЕНЫ ПО СЛОЯМ ===
   const wallsBottom = $derived.by(() => {
     const result = [];
     for (let y = 0; y < wallsGrid.length; y++) {
@@ -78,7 +66,6 @@
     return result;
   });
 
-  // === OBJECTS ===
   function typeOf(v) {
     if (v >= 2 && v <= 7) return "ball";
     if (v >= 22 && v <= 77) return "hole";
@@ -87,33 +74,31 @@
   }
 
   function colorOf(v) {
-    if (v >= 2 && v <= 7) return colorToCss(v - 1, isDark);
-    if (v >= 22 && v <= 77) return colorToCss(Math.floor(v / 11), isDark);
+    if (v >= 2 && v <= 7) return Colors.ballColor(v - 1);
+    if (v >= 22 && v <= 77) return Colors.ballColor(Math.floor(v / 11));
     return null;
   }
 
-  // === СМЕЩЕНИЕ OBJECTS ===
   const objOffsetX = $derived(cellSize / 2);
   const objOffsetY = $derived(cellSize / 1.5);
 
-  // === СМЕНА ТЕМЫ (глобальная) ===
   function toggleTheme() {
     isDarkMode.update((v) => !v);
   }
 </script>
 
-<div class="wrapper" class:dark={isDark}>
+<div class="wrapper">
   <div class="controls">
     <button
       class="toggle-btn"
-      class:dark={isDark}
-      on:click={() => (showWalls = !showWalls)}
+      class:dark={$isDarkMode}
+      on:click={toggleWalls}
     >
-      {showWalls ? "👁️ Скрыть стены" : "🧱 Показать стены"}
+      {$showWalls ? "👁️ Скрыть стены" : "🧱 Показать стены"}
     </button>
 
-    <button class="toggle-btn" class:dark={isDark} on:click={toggleTheme}>
-      {isDark ? "☀️ Светлая" : "🌙 Тёмная"}
+    <button class="toggle-btn" class:dark={$isDarkMode} on:click={toggleTheme}>
+      {$isDarkMode ? "☀️ Светлая" : "🌙 Тёмная"}
     </button>
   </div>
 
@@ -124,14 +109,19 @@
     {#if cellSize > 0}
       <div
         class="board"
-        style="width: {boardW}px; height: {boardH}px; --cell: {cellSize}px; background: {boardBg};"
+        style="
+          width: {boardW}px;
+          height: {boardH}px;
+          --cell: {cellSize}px;
+          --grid-color: {Colors.Grid.grid($isDarkMode)};
+          background: {Colors.Background.fieldBackground($isDarkMode)};
+        "
       >
-        <div class="grid" class:dark={isDark}></div>
+        <div class="grid"></div>
 
-        <!-- Слой 2: стены bottom (под объектами) -->
-        {#if showWalls}
+        {#if $showWalls}
           <div class="layer walls-bottom">
-            {#each wallsBottom as { x, y, wallType } (x + "-" + y + "-b")}
+            {#each wallsBottom as { x, y, wallType } (x + "-" + y + "-b-" + $isDarkMode)}
               <div
                 class="wall-cell"
                 style="
@@ -141,19 +131,18 @@
                   height: {cellSize}px;
                 "
               >
-                {@html getWallSVG(wallType, isDark, cellSize)}
+                {@html getWallSVG(wallType, $isDarkMode, cellSize)}
               </div>
             {/each}
           </div>
         {/if}
 
-        <!-- Слой 3: объекты -->
         <div class="layer objects">
           {#each objectsGrid as row, y}
             {#each row as v, x}
               {@const t = typeOf(v)}
               {#if t}
-                {#if !(showWalls && t === "block")}
+                {#if !($showWalls && t === "block")}
                   <div
                     class="cell"
                     style="
@@ -166,18 +155,14 @@
                     {#if t === "ball"}
                       <div
                         class="ball"
-                        style="width: {cellSize}px; height: {cellSize}px; background: {colorOf(
-                          v,
-                        )};"
+                        style="width: {cellSize}px; height: {cellSize}px; background: {colorOf(v)};"
                       >
                         <div class="ball-hl"></div>
                       </div>
                     {:else if t === "hole"}
                       <div
                         class="hole"
-                        style="width: {cellSize}px; height: {cellSize}px; border-color: {colorOf(
-                          v,
-                        )};"
+                        style="width: {cellSize}px; height: {cellSize}px; border-color: {colorOf(v)};"
                       ></div>
                     {:else if t === "block"}
                       <div
@@ -192,10 +177,9 @@
           {/each}
         </div>
 
-        <!-- Слой 4: стены top (над объектами) -->
-        {#if showWalls}
+        {#if $showWalls}
           <div class="layer walls-top">
-            {#each wallsTop as { x, y, wallType } (x + "-" + y + "-t")}
+            {#each wallsTop as { x, y, wallType } (x + "-" + y + "-t-" + $isDarkMode)}
               <div
                 class="wall-cell"
                 style="
@@ -205,7 +189,7 @@
                   height: {cellSize}px;
                 "
               >
-                {@html getWallSVG(wallType, isDark, cellSize)}
+                {@html getWallSVG(wallType, $isDarkMode, cellSize)}
               </div>
             {/each}
           </div>
@@ -226,13 +210,10 @@
     height: 100%;
     padding: 8px;
     box-sizing: border-box;
-    transition: background 0.3s ease;
     overflow: hidden;
     background: transparent;
   }
-  .wrapper.dark {
-    background: transparent;
-  }
+
   .controls {
     display: flex;
     gap: 8px;
@@ -281,7 +262,7 @@
     position: relative;
     border-radius: 8px;
     overflow: hidden;
-    transition: background 0.3s ease;
+    /* transition: background 0.3s ease; */
   }
 
   .grid {
@@ -289,20 +270,10 @@
     inset: 0;
     pointer-events: none;
     z-index: 1;
-    background-image: linear-gradient(
-        rgba(59, 45, 104, 0.4) 1px,
-        transparent 1px
-      ),
-      linear-gradient(90deg, rgba(59, 45, 104, 0.4) 1px, transparent 1px);
+    background-image:
+      linear-gradient(var(--grid-color) 1px, transparent 1px),
+      linear-gradient(90deg, var(--grid-color) 1px, transparent 1px);
     background-size: var(--cell) var(--cell);
-  }
-
-  .grid.dark {
-    background-image: linear-gradient(
-        rgba(100, 86, 145, 0.3) 1px,
-        transparent 1px
-      ),
-      linear-gradient(90deg, rgba(100, 86, 145, 0.3) 1px, transparent 1px);
   }
 
   .layer {
@@ -311,15 +282,9 @@
     pointer-events: none;
   }
 
-  .walls-bottom {
-    z-index: 2;
-  }
-  .objects {
-    z-index: 3;
-  }
-  .walls-top {
-    z-index: 4;
-  }
+  .walls-bottom { z-index: 2; }
+  .objects { z-index: 3; }
+  .walls-top { z-index: 4; }
 
   .wall-cell {
     position: absolute;

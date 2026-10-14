@@ -1,98 +1,53 @@
 <!-- src/components/Header.svelte -->
 <script>
   import {
-    currentLevelIndex,
-    totalLevels,
-    levelName,
-    previousLevel,
-    nextLevel,
     restartLevel,
     toggleSettings,
-    useHint,
-    undoMove,
-    movesCount,
-    isDarkMode,
+    currentLevelIndex,
   } from '../lib/stores/gameStore.svelte.js';
-  import { editorUnlocked, openEditor } from '../lib/stores/appStore.svelte.js';
-  import { soundManager } from '../lib/utils/sound.js';
   import { Colors } from '../lib/styles/colors.js';
+  import { t } from '../lib/i18n/ru.js';
 
-  let moves = 0;
-  movesCount.subscribe(value => moves = value);
+  let { onOpenLevels = null } = $props();
 
-  // Цвета из Colors — единый источник
-  const headerBg = $derived(
-    Colors.Background.appBackground($isDarkMode)
-  );
+  const btnBg = `linear-gradient(135deg, ${Colors.buttonGradientStart}, ${Colors.buttonGradientEnd})`;
 </script>
 
-<header
-  class="header"
-  class:dark={$isDarkMode}
-  style="background: {headerBg};"
->
-  <div class="header-left">
-    <button class="icon-btn" on:click={restartLevel} aria-label="Restart" title="Заново">
-      <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
-        <path d="M3 12a9 9 0 1 0 9-9m0 0v6m0-6h-6" stroke-linecap="round" stroke-linejoin="round"/>
-      </svg>
-    </button>
+<header class="header">
+  <button
+    class="round-btn"
+    style="background: {btnBg};"
+    on:click={restartLevel}
+    aria-label={t.restart}
+    title={t.restart}
+  >
+    <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M21 12a9 9 0 1 1-3-6.7" />
+      <polyline points="21 3 21 9 15 9" />
+    </svg>
+  </button>
 
-    <button class="icon-btn" on:click={undoMove} disabled={moves === 0} aria-label="Undo" title="Отменить">
-      <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
-        <path d="M3 7v6h6" stroke-linecap="round" stroke-linejoin="round"/>
-        <path d="M21 17a9 9 0 00-9-9 9 9 0 00-6 2.3L3 13" stroke-linecap="round" stroke-linejoin="round"/>
-      </svg>
-    </button>
-  </div>
+  <button
+    class="level-badge"
+    on:click={() => onOpenLevels?.()}
+    aria-label={t.levels}
+    title={t.levels}
+  >
+    {t.level($currentLevelIndex + 1)}
+  </button>
 
-  <div class="level-display">
-    <span class="level-label">{$levelName}</span>
-    <span class="level-sub">Moves: {moves}</span>
-  </div>
-
-  <div class="header-right">
-    <button
-      class="icon-btn"
-      on:click={() => {
-        const hint = useHint();
-        if (hint) soundManager.playMove();
-      }}
-      aria-label="Hint"
-      title="Подсказка"
-    >
-      <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
-        <circle cx="12" cy="12" r="10"/>
-        <path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3" stroke-linecap="round" stroke-linejoin="round"/>
-        <line x1="12" y1="17" x2="12.01" y2="17" stroke-linecap="round"/>
-      </svg>
-    </button>
-
-    {#if $editorUnlocked}
-      <button class="icon-btn editor-btn" on:click={openEditor} aria-label="Editor" title="Редактор уровней">
-        🎨
-      </button>
-    {/if}
-
-    <button class="icon-btn" on:click={previousLevel} disabled={$currentLevelIndex === 0} aria-label="Previous level" title="Предыдущий">
-      <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
-        <path d="M15 19l-7-7 7-7" stroke-linecap="round" stroke-linejoin="round"/>
-      </svg>
-    </button>
-
-    <button class="icon-btn" on:click={nextLevel} disabled={$currentLevelIndex >= $totalLevels - 1} aria-label="Next level" title="Следующий">
-      <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
-        <path d="M9 5l7 7-7 7" stroke-linecap="round" stroke-linejoin="round"/>
-      </svg>
-    </button>
-
-    <button class="icon-btn" on:click={toggleSettings} aria-label="Settings" title="Настройки">
-      <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
-        <circle cx="12" cy="12" r="3"/>
-        <path d="M12 1v4m0 14v4M4.22 4.22l2.83 2.83m9.9 9.9l2.83 2.83M1 12h4m14 0h4M4.22 19.78l2.83-2.83m9.9-9.9l2.83-2.83"/>
-      </svg>
-    </button>
-  </div>
+  <button
+    class="round-btn"
+    style="background: {btnBg};"
+    on:click={toggleSettings}
+    aria-label={t.settings}
+    title={t.settings}
+  >
+    <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="12" r="3" />
+      <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h.01a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51h.01a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v.01a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+    </svg>
+  </button>
 </header>
 
 <style>
@@ -100,77 +55,84 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 8px;
-    padding: 10px 16px;
-    backdrop-filter: blur(12px);
-    border-radius: 18px;
+    gap: 12px;
     width: 100%;
     max-width: 520px;
-    transition: background 0.3s ease;
+    padding: 6px 4px;
     box-sizing: border-box;
   }
 
-  .header-left, .header-right {
-    display: flex;
-    align-items: center;
-    gap: 4px;
-  }
-
-  .icon-btn {
-    width: 36px;
-    height: 36px;
+  .round-btn {
+    width: 64px;
+    height: 64px;
     border: none;
-    background: transparent;
-    border-radius: 10px;
+    border-radius: 22px;
     display: flex;
     align-items: center;
     justify-content: center;
-    color: #50427D;
     cursor: pointer;
-    transition: all 0.15s ease;
+    color: white;
+    box-shadow: 0 4px 10px rgba(114, 47, 192, 0.25);
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
     flex-shrink: 0;
-    font-size: 18px;
+    padding: 0;
   }
 
-  .dark .icon-btn { color: #d9c8fb; }
+  .round-btn:active {
+    transform: translateY(2px) scale(0.96);
+    box-shadow: 0 2px 6px rgba(114, 47, 192, 0.2);
+  }
 
-  .icon-btn:hover:not(:disabled) { background: rgba(80, 66, 125, 0.08); }
-  .dark .icon-btn:hover:not(:disabled) { background: rgba(217, 200, 251, 0.08); }
-
-  .icon-btn:disabled { opacity: 0.25; cursor: not-allowed; }
-  .icon-btn:active:not(:disabled) { transform: scale(0.9); }
-
-  .editor-btn { background: rgba(114, 47, 192, 0.08); }
-  .dark .editor-btn { background: rgba(217, 200, 251, 0.08); }
-
-  .level-display {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
+  .level-badge {
     flex: 1;
-    min-width: 60px;
-  }
-
-  .level-label {
-    font-size: 17px;
+    max-width: 260px;
+    padding: 18px 24px;
+    border: none;
+    border-radius: 24px;
+    background: rgba(114, 47, 192, 0.18);
+    color: #722FC0;
+    font-size: 22px;
     font-weight: 700;
-    color: #50427D;
+    font-family: inherit;
     letter-spacing: -0.3px;
-    line-height: 1.2;
+    text-align: center;
+    cursor: pointer;
+    transition: background 0.15s ease, transform 0.15s ease;
   }
-  .dark .level-label { color: #d9c8fb; }
 
-  .level-sub {
-    font-size: 10px;
-    color: #999;
-    font-weight: 500;
-    letter-spacing: 0.3px;
+  .level-badge:hover {
+    background: rgba(114, 47, 192, 0.24);
   }
-  .dark .level-sub { color: rgba(217, 200, 251, 0.5); }
+
+  .level-badge:active {
+    transform: scale(0.98);
+  }
+
+  :global(.dark) .level-badge {
+    background: rgba(166, 157, 212, 0.18);
+    color: #D9C8FB;
+  }
+
+  :global(.dark) .level-badge:hover {
+    background: rgba(166, 157, 212, 0.24);
+  }
 
   @media (max-width: 480px) {
-    .header { padding: 8px 12px; border-radius: 14px; }
-    .icon-btn { width: 32px; height: 32px; font-size: 16px; }
-    .level-label { font-size: 15px; }
+    .round-btn {
+      width: 54px;
+      height: 54px;
+      border-radius: 18px;
+    }
+
+    .round-btn svg {
+      width: 24px;
+      height: 24px;
+    }
+
+    .level-badge {
+      padding: 14px 18px;
+      font-size: 18px;
+      border-radius: 20px;
+    }
   }
 </style>

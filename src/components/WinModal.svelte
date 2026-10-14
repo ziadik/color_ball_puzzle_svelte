@@ -1,27 +1,24 @@
+<!-- src/components/WinModal.svelte -->
 <script>
-  import { 
-    showWinModal, 
-    currentLevelIndex, 
-    totalLevels, 
-    nextLevel, 
-    restartLevel, 
+  import {
+    showWinModal,
+    currentLevelIndex,
+    totalLevels,
+    nextLevel,
+    restartLevel,
     movesCount,
-    isDarkMode
+    isDarkMode,
   } from '../lib/stores/gameStore.svelte.js';
   import { soundManager } from '../lib/utils/sound.js';
+  import { t } from '../lib/i18n/ru.js';
 
   let moves = $derived($movesCount);
-  let levelNum = $derived($currentLevelIndex + 1);
   let isLastLevel = $derived($currentLevelIndex >= $totalLevels - 1);
-  
 
   function handleNext() {
     showWinModal.set(false);
-    if (!isLastLevel) {
-      nextLevel();
-    } else {
-      restartLevel();
-    }
+    if (!isLastLevel) nextLevel();
+    else restartLevel();
   }
 
   function handleRestart() {
@@ -29,29 +26,30 @@
     restartLevel();
   }
 
-  // Play victory sound when modal appears
   $effect(() => {
-    if ($showWinModal) {
-      soundManager.playVictory();
-    }
+    if ($showWinModal) soundManager.playVictory();
   });
 </script>
 
 {#if $showWinModal}
-  <div class="overlay" class:dark={$isDarkMode} on:click={e => e.target === e.currentTarget && handleRestart()}>
+  <div
+    class="overlay"
+    class:dark={$isDarkMode}
+    on:click={(e) => e.target === e.currentTarget && handleRestart()}
+  >
     <div class="modal" class:dark={$isDarkMode}>
       <div class="icon">🏆</div>
-      <h2>Level Complete!</h2>
-      <p class="moves-text">Moves: {moves}</p>
-      
+      <h2>{t.win}</h2>
+      <p class="moves-text">{t.winMoves(moves)}</p>
+
       <div class="buttons">
         {#if !isLastLevel}
           <button class="btn primary" on:click={handleNext}>
-            Next Level →
+            {t.winNext}
           </button>
         {/if}
         <button class="btn secondary" on:click={handleRestart}>
-          {isLastLevel ? 'Play Again' : 'Restart'}
+          {isLastLevel ? t.winPlayAgain : t.winRestart}
         </button>
       </div>
     </div>
@@ -61,11 +59,8 @@
 <style>
   .overlay {
     position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: rgba(0,0,0,0.5);
+    inset: 0;
+    background: rgba(0, 0, 0, 0.5);
     backdrop-filter: blur(8px);
     -webkit-backdrop-filter: blur(8px);
     display: flex;
@@ -82,13 +77,13 @@
     max-width: 340px;
     width: 90%;
     text-align: center;
-    box-shadow: 0 24px 64px rgba(0,0,0,0.25);
+    box-shadow: 0 24px 64px rgba(0, 0, 0, 0.25);
     animation: slideUp 0.4s ease;
   }
 
   .modal.dark {
     background: #2d234b;
-    box-shadow: 0 24px 64px rgba(0,0,0,0.5);
+    box-shadow: 0 24px 64px rgba(0, 0, 0, 0.5);
   }
 
   .icon {
@@ -99,7 +94,7 @@
   h2 {
     font-size: 22px;
     font-weight: 700;
-    color: #50427D;
+    color: #50427d;
     margin: 0 0 4px;
   }
 
@@ -131,6 +126,7 @@
     font-weight: 600;
     cursor: pointer;
     transition: all 0.2s ease;
+    font-family: inherit;
   }
 
   .btn:active {
@@ -138,8 +134,8 @@
   }
 
   .btn.primary {
-    background: linear-gradient(135deg, #722FC0, #8F5CEC);
-    color: #ffffff;
+    background: linear-gradient(135deg, #722fc0, #8f5cec);
+    color: #fff;
   }
 
   .btn.primary:hover {
@@ -149,7 +145,7 @@
 
   .btn.secondary {
     background: rgba(80, 66, 125, 0.08);
-    color: #50427D;
+    color: #50427d;
   }
 
   .modal.dark .btn.secondary {
@@ -176,14 +172,8 @@
   }
 
   @media (max-width: 400px) {
-    .modal {
-      padding: 28px 24px 24px;
-    }
-    .icon {
-      font-size: 44px;
-    }
-    h2 {
-      font-size: 20px;
-    }
+    .modal { padding: 28px 24px 24px; }
+    .icon { font-size: 44px; }
+    h2 { font-size: 20px; }
   }
 </style>

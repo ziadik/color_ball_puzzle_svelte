@@ -1,35 +1,35 @@
 <!-- src/components/Header.svelte -->
 <script>
-  import { 
-    currentLevelIndex, 
-    totalLevels, 
-    levelName, 
-    previousLevel, 
-    nextLevel, 
+  import {
+    currentLevelIndex,
+    totalLevels,
+    levelName,
+    previousLevel,
+    nextLevel,
     restartLevel,
     toggleSettings,
     useHint,
     undoMove,
     movesCount,
-    isDarkMode
+    isDarkMode,
   } from '../lib/stores/gameStore.svelte.js';
   import { editorUnlocked, openEditor } from '../lib/stores/appStore.svelte.js';
   import { soundManager } from '../lib/utils/sound.js';
+  import { Colors } from '../lib/styles/colors.js';
 
-  let isDark = false;
   let moves = 0;
-  
-  isDarkMode.subscribe(value => isDark = value);
   movesCount.subscribe(value => moves = value);
+
+  // Цвета из Colors — единый источник
+  const headerBg = $derived(
+    Colors.Background.appBackground($isDarkMode)
+  );
 </script>
 
-<header 
-  class="header" 
-  class:dark={isDark}
-  style="
-    background: {isDark ? 'rgba(45, 35, 75, 0.92)' : 'rgba(255,255,255,0.85)'};
-    box-shadow: {isDark ? '0 2px 12px rgba(0,0,0,0.3)' : '0 2px 12px rgba(0,0,0,0.06)'};
-  "
+<header
+  class="header"
+  class:dark={$isDarkMode}
+  style="background: {headerBg};"
 >
   <div class="header-left">
     <button class="icon-btn" on:click={restartLevel} aria-label="Restart" title="Заново">
@@ -37,14 +37,8 @@
         <path d="M3 12a9 9 0 1 0 9-9m0 0v6m0-6h-6" stroke-linecap="round" stroke-linejoin="round"/>
       </svg>
     </button>
-    
-    <button 
-      class="icon-btn" 
-      on:click={undoMove}
-      disabled={moves === 0}
-      aria-label="Undo"
-      title="Отменить"
-    >
+
+    <button class="icon-btn" on:click={undoMove} disabled={moves === 0} aria-label="Undo" title="Отменить">
       <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
         <path d="M3 7v6h6" stroke-linecap="round" stroke-linejoin="round"/>
         <path d="M21 17a9 9 0 00-9-9 9 9 0 00-6 2.3L3 13" stroke-linecap="round" stroke-linejoin="round"/>
@@ -58,8 +52,8 @@
   </div>
 
   <div class="header-right">
-    <button 
-      class="icon-btn" 
+    <button
+      class="icon-btn"
       on:click={() => {
         const hint = useHint();
         if (hint) soundManager.playMove();
@@ -75,46 +69,24 @@
     </button>
 
     {#if $editorUnlocked}
-      <button 
-        class="icon-btn editor-btn" 
-        on:click={openEditor}
-        aria-label="Editor"
-        title="Редактор уровней"
-      >
+      <button class="icon-btn editor-btn" on:click={openEditor} aria-label="Editor" title="Редактор уровней">
         🎨
       </button>
     {/if}
 
-    <button 
-      class="icon-btn" 
-      on:click={previousLevel}
-      disabled={$currentLevelIndex === 0}
-      aria-label="Previous level"
-      title="Предыдущий"
-    >
+    <button class="icon-btn" on:click={previousLevel} disabled={$currentLevelIndex === 0} aria-label="Previous level" title="Предыдущий">
       <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
         <path d="M15 19l-7-7 7-7" stroke-linecap="round" stroke-linejoin="round"/>
       </svg>
     </button>
 
-    <button 
-      class="icon-btn" 
-      on:click={nextLevel}
-      disabled={$currentLevelIndex >= $totalLevels - 1}
-      aria-label="Next level"
-      title="Следующий"
-    >
+    <button class="icon-btn" on:click={nextLevel} disabled={$currentLevelIndex >= $totalLevels - 1} aria-label="Next level" title="Следующий">
       <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
         <path d="M9 5l7 7-7 7" stroke-linecap="round" stroke-linejoin="round"/>
       </svg>
     </button>
 
-    <button 
-      class="icon-btn" 
-      on:click={toggleSettings}
-      aria-label="Settings"
-      title="Настройки"
-    >
+    <button class="icon-btn" on:click={toggleSettings} aria-label="Settings" title="Настройки">
       <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
         <circle cx="12" cy="12" r="3"/>
         <path d="M12 1v4m0 14v4M4.22 4.22l2.83 2.83m9.9 9.9l2.83 2.83M1 12h4m14 0h4M4.22 19.78l2.83-2.83m9.9-9.9l2.83-2.83"/>
@@ -160,34 +132,16 @@
     font-size: 18px;
   }
 
-  .dark .icon-btn {
-    color: #d9c8fb;
-  }
+  .dark .icon-btn { color: #d9c8fb; }
 
-  .icon-btn:hover:not(:disabled) {
-    background: rgba(80, 66, 125, 0.08);
-  }
+  .icon-btn:hover:not(:disabled) { background: rgba(80, 66, 125, 0.08); }
+  .dark .icon-btn:hover:not(:disabled) { background: rgba(217, 200, 251, 0.08); }
 
-  .dark .icon-btn:hover:not(:disabled) {
-    background: rgba(217, 200, 251, 0.08);
-  }
+  .icon-btn:disabled { opacity: 0.25; cursor: not-allowed; }
+  .icon-btn:active:not(:disabled) { transform: scale(0.9); }
 
-  .icon-btn:disabled {
-    opacity: 0.25;
-    cursor: not-allowed;
-  }
-
-  .icon-btn:active:not(:disabled) {
-    transform: scale(0.9);
-  }
-
-  .editor-btn {
-    background: rgba(114, 47, 192, 0.08);
-  }
-
-  .dark .editor-btn {
-    background: rgba(217, 200, 251, 0.08);
-  }
+  .editor-btn { background: rgba(114, 47, 192, 0.08); }
+  .dark .editor-btn { background: rgba(217, 200, 251, 0.08); }
 
   .level-display {
     display: flex;
@@ -204,10 +158,7 @@
     letter-spacing: -0.3px;
     line-height: 1.2;
   }
-
-  .dark .level-label {
-    color: #d9c8fb;
-  }
+  .dark .level-label { color: #d9c8fb; }
 
   .level-sub {
     font-size: 10px;
@@ -215,25 +166,11 @@
     font-weight: 500;
     letter-spacing: 0.3px;
   }
-
-  .dark .level-sub {
-    color: rgba(217, 200, 251, 0.5);
-  }
+  .dark .level-sub { color: rgba(217, 200, 251, 0.5); }
 
   @media (max-width: 480px) {
-    .header {
-      padding: 8px 12px;
-      border-radius: 14px;
-    }
-
-    .icon-btn {
-      width: 32px;
-      height: 32px;
-      font-size: 16px;
-    }
-
-    .level-label {
-      font-size: 15px;
-    }
+    .header { padding: 8px 12px; border-radius: 14px; }
+    .icon-btn { width: 32px; height: 32px; font-size: 16px; }
+    .level-label { font-size: 15px; }
   }
 </style>

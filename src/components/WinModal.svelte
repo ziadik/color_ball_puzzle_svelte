@@ -13,7 +13,7 @@
   let moves = $derived($movesCount);
   let levelNum = $derived($currentLevelIndex + 1);
   let isLastLevel = $derived($currentLevelIndex >= $totalLevels - 1);
-  let isDark = $derived($isDarkMode);
+  
 
   function handleNext() {
     showWinModal.set(false);
@@ -38,8 +38,8 @@
 </script>
 
 {#if $showWinModal}
-  <div class="overlay" class:dark={isDark} on:click={e => e.target === e.currentTarget && handleRestart()}>
-    <div class="modal" class:dark={isDark}>
+  <div class="overlay" class:dark={$isDarkMode} on:click={e => e.target === e.currentTarget && handleRestart()}>
+    <div class="modal" class:dark={$isDarkMode}>
       <div class="icon">🏆</div>
       <h2>Level Complete!</h2>
       <p class="moves-text">Moves: {moves}</p>

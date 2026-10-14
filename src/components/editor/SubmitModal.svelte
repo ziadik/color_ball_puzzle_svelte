@@ -1,7 +1,7 @@
 <!-- src/components/editor/SubmitModal.svelte -->
 <script>
   import { vkBridge } from '../../lib/services/vkBridge.js';
-
+import { isDarkMode } from '../../lib/stores/gameStore.svelte.js';
   let {
     isOpen = false,
     level = null,
@@ -95,8 +95,8 @@ ${JSON.stringify(level, null, 2)}
 </script>
 
 {#if isOpen}
-  <div class="overlay" class:dark={isDark} on:click={(e) => e.target === e.currentTarget && close()}>
-    <div class="modal" class:dark={isDark} class:mobile={isMobile}>
+  <div class="overlay" class:dark={$isDarkMode} on:click={(e) => e.target === e.currentTarget && close()}>
+    <div class="modal" class:dark={$isDarkMode} class:mobile={isMobile}>
       
       {#if sendStatus === 'success'}
         <div class="status-view">
@@ -253,7 +253,7 @@ ${JSON.stringify(level, null, 2)}
 
   .modal.dark input[type="text"],
   .modal.dark textarea {
-    background: #363344;
+    background: var(--board-bg, #363344);
     color: #d9c8fb;
     border-color: rgba(217, 200, 251, 0.15);
   }

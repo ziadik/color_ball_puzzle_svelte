@@ -1,5 +1,6 @@
 <!-- src/components/editor/SizeModal.svelte -->
 <script>
+import { isDarkMode } from '../../lib/stores/gameStore.svelte.js';
   let {
     isOpen = false,
     width = 8,
@@ -34,7 +35,7 @@
 
 {#if isOpen}
   <div class="overlay" on:click={(e) => e.target === e.currentTarget && onClose?.()}>
-    <div class="modal" class:dark={isDark} class:mobile={isMobile}>
+    <div class="modal" class:dark={$isDarkMode} class:mobile={isMobile}>
       <h2>📐 Размер поля</h2>
 
       <div class="inputs">
@@ -119,7 +120,7 @@
   }
 
   .modal.dark .inputs input {
-    background: #363344;
+    background: var(--board-bg, #363344);
     color: #d9c8fb;
     border-color: rgba(217, 200, 251, 0.15);
   }

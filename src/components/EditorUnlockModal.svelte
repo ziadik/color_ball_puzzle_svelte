@@ -3,8 +3,7 @@
   import { showEditorUnlockModal, openEditor, dismissUnlockModal } from '../lib/stores/appStore.svelte.js';
   import { isDarkMode } from '../lib/stores/gameStore.svelte.js';
 
-  let isDark = false;
-  isDarkMode.subscribe(v => isDark = v);
+
 
   function handleOpen() {
     openEditor();
@@ -17,7 +16,7 @@
 
 {#if $showEditorUnlockModal}
   <div class="overlay" on:click={(e) => e.target === e.currentTarget && handleLater()}>
-    <div class="modal" class:dark={isDark}>
+    <div class="modal" class:dark={$isDarkMode}>
       <div class="icon">🎨</div>
       <h2>Редактор открыт!</h2>
       <p>Ты прошёл все уровни. Теперь можешь создавать свои и предлагать их для публикации.</p>

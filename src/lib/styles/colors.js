@@ -1,7 +1,7 @@
 // src/lib/styles/colors.js
 
 // ============================================================
-// БАЗОВЫЕ ПАЛИТРЫ (значения задаются только здесь)
+// БАЗОВЫЕ ПАЛИТРЫ
 // ============================================================
 
 const Palette = {
@@ -39,13 +39,10 @@ const Palette = {
 // ============================================================
 
 export const Colors = {
-  // Ball — переиспользование Palette.Ball
   BallMap: Palette.Ball,
-
   ballColor: (color) => Palette.Ball[color]?.hex || "#999999",
   ballMeta: (color) => Palette.Ball[color] || null,
 
-  // Background — переиспользование Palette
   Background: {
     appBackground: (isDark) =>
       isDark ? Palette.Surface.dark : Palette.Surface.light,
@@ -75,7 +72,6 @@ export const Colors = {
     holeStroke: (isDark, color) => color,
   },
 
-  // Основные — переиспользование Palette.Accent
   primary: Palette.Accent.primary,
   secondary: Palette.Accent.success,
   errorColor: Palette.Accent.error,
@@ -86,12 +82,10 @@ export const Colors = {
   backgroundColor: Palette.Surface.light,
   surfaceColor: Palette.Surface.light,
 
-  // Градиенты — переиспользование
   buttonGradientStart: Palette.Accent.gradientStart,
   buttonGradientEnd: Palette.Accent.gradientEnd,
   buttonIconColor: Palette.Accent.gradientIcon,
 
-  // Alert — переиспользование
   alertTitleColor: (isDark) => (isDark ? "#FFFFFF" : Palette.Accent.primary),
   alertMessageColor: (isDark) => (isDark ? "#FFFFFF" : "rgba(80,66,125,0.8)"),
   alertBackgroundColor: (isDark) =>

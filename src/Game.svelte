@@ -6,12 +6,14 @@
   import WinModal from './components/WinModal.svelte';
   import SettingsModal from './components/SettingsModal.svelte';
   import EditorUnlockModal from './components/EditorUnlockModal.svelte';
+  import LevelsModal from './components/LevelsModal.svelte';
   import { currentLevelIndex } from './lib/stores/gameStore.svelte.js';
 
   let boardContainer;
   let containerWidth = $state(0);
   let containerHeight = $state(0);
   let boardKey = $state(0);
+  let showLevels = $state(false);
 
   onMount(() => {
     const unsubscribe = currentLevelIndex.subscribe(() => {
@@ -33,14 +35,18 @@
     containerWidth = rect.width;
     containerHeight = rect.height;
   }
+
+  function openLevels() {
+    showLevels = true;
+  }
 </script>
 
 <div class="game-wrapper">
-  <Header />
-  
+  <Header onOpenLevels={openLevels} />
+
   <div class="board-wrapper" bind:this={boardContainer}>
     {#key boardKey}
-      <GameBoard 
+      <GameBoard
         containerWidth={containerWidth}
         containerHeight={containerHeight}
       />
@@ -51,6 +57,7 @@
 <WinModal />
 <SettingsModal />
 <EditorUnlockModal />
+<LevelsModal isOpen={showLevels} onClose={() => (showLevels = false)} />
 
 <style>
   .game-wrapper {
@@ -75,10 +82,16 @@
   }
 
   @media (max-width: 480px) {
-    .game-wrapper { gap: 10px; max-height: 90vh; }
+    .game-wrapper {
+      gap: 10px;
+      max-height: 90vh;
+    }
   }
 
   @media (min-width: 768px) {
-    .game-wrapper { max-height: 800px; max-width: 600px; }
+    .game-wrapper {
+      max-height: 800px;
+      max-width: 600px;
+    }
   }
 </style>

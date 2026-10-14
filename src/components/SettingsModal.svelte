@@ -1,66 +1,68 @@
 <!-- src/components/SettingsModal.svelte -->
 <script>
-  import { showSettings, soundEnabled, vibrationEnabled, isDarkMode } from '../lib/stores/gameStore.svelte.js';
+  import {
+    showSettings,
+    soundEnabled,
+    vibrationEnabled,
+    isDarkMode,
+  } from '../lib/stores/gameStore.svelte.js';
   import { soundManager } from '../lib/utils/sound.js';
-
-  let localSound = false;
-  let localVibration = false;
-  let localDark = false;
-
-  soundEnabled.subscribe(v => localSound = v);
-  vibrationEnabled.subscribe(v => localVibration = v);
-  isDarkMode.subscribe(v => localDark = v);
+  import { t } from '../lib/i18n/ru.js';
 
   function close() {
     showSettings.set(false);
   }
 
   function toggleSound() {
-    localSound = !localSound;
-    soundEnabled.set(localSound);
-    soundManager.enabled = localSound;
+    soundEnabled.update((v) => {
+      soundManager.enabled = !v;
+      return !v;
+    });
   }
 
   function toggleVibration() {
-    localVibration = !localVibration;
-    vibrationEnabled.set(localVibration);
+    vibrationEnabled.update((v) => !v);
   }
 
   function toggleDark() {
-    localDark = !localDark;
-    isDarkMode.set(localDark);
-    document.documentElement.classList.toggle('dark', localDark);
+    isDarkMode.update((v) => {
+      document.documentElement.classList.toggle('dark', !v);
+      return !v;
+    });
   }
 </script>
 
 {#if $showSettings}
-  <div class="overlay" on:click={e => e.target === e.currentTarget && close()}>
-    <div class="modal" class:dark={localDark}>
-      <h2>Settings</h2>
+  <div
+    class="overlay"
+    on:click={(e) => e.target === e.currentTarget && close()}
+  >
+    <div class="modal" class:dark={$isDarkMode}>
+      <h2>{t.settings}</h2>
 
       <div class="setting" on:click={toggleSound}>
-        <label>Sound Effects</label>
+        <label>{t.soundEffects}</label>
         <div class="toggle">
-          <div class="slider" class:active={localSound}></div>
+          <div class="slider" class:active={$soundEnabled}></div>
         </div>
       </div>
 
       <div class="setting" on:click={toggleVibration}>
-        <label>Vibration</label>
+        <label>{t.vibration}</label>
         <div class="toggle">
-          <div class="slider" class:active={localVibration}></div>
+          <div class="slider" class:active={$vibrationEnabled}></div>
         </div>
       </div>
 
       <div class="setting" on:click={toggleDark}>
-        <label>Dark Mode</label>
+        <label>{t.darkMode}</label>
         <div class="toggle">
-          <div class="slider" class:active={localDark}></div>
+          <div class="slider" class:active={$isDarkMode}></div>
         </div>
       </div>
 
-      <button class="close-btn" class:dark={localDark} on:click={close}>
-        Close
+      <button class="close-btn" on:click={close}>
+        {t.close}
       </button>
     </div>
   </div>
@@ -69,10 +71,7 @@
 <style>
   .overlay {
     position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
+    inset: 0;
     background: rgba(0, 0, 0, 0.4);
     backdrop-filter: blur(8px);
     -webkit-backdrop-filter: blur(8px);
@@ -84,7 +83,7 @@
   }
 
   .modal {
-    background: #FFFFFF;
+    background: #ffffff;
     border-radius: 24px;
     padding: 28px 24px 24px;
     max-width: 320px;
@@ -93,14 +92,14 @@
   }
 
   .modal.dark {
-    background: #2D234B;
+    background: #2d234b;
     box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
   }
 
   h2 {
     font-size: 20px;
     font-weight: 700;
-    color: #50427D;
+    color: #50427d;
     margin: 0 0 20px;
     text-align: center;
   }
@@ -146,10 +145,7 @@
 
   .slider {
     position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
+    inset: 0;
     background: #ccc;
     border-radius: 26px;
     cursor: pointer;
@@ -170,7 +166,7 @@
   }
 
   .slider.active {
-    background: #722FC0;
+    background: #722fc0;
   }
 
   .slider.active::before {
@@ -186,9 +182,10 @@
     font-size: 15px;
     font-weight: 600;
     background: rgba(80, 66, 125, 0.08);
-    color: #50427D;
+    color: #50427d;
     cursor: pointer;
     transition: all 0.2s ease;
+    font-family: inherit;
   }
 
   .modal.dark .close-btn {
@@ -214,8 +211,6 @@
   }
 
   @media (max-width: 400px) {
-    .modal {
-      padding: 24px 20px 20px;
-    }
+    .modal { padding: 24px 20px 20px; }
   }
 </style>

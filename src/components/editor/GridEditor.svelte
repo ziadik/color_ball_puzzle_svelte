@@ -44,11 +44,11 @@
     return null;
   }
 
-  function colorOf(v) {
-    if (v >= 2 && v <= 7) return Colors.ballColor(v - 1);
-    if (v >= 22 && v <= 77) return Colors.ballColor(Math.floor(v / 11));
-    return null;
-  }
+function colorOf(v) {
+  if (v >= 2 && v <= 7) return Colors.ballColor(v - 1);
+  if (v >= 22 && v <= 77) return Colors.ballColor(Math.floor(v / 11) - 1);
+  return null;
+}
 
   // === КООРДИНАТЫ КЛИКА → КЛЕТКА ===
   let touchStartX = 0;

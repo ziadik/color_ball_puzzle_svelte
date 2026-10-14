@@ -82,25 +82,11 @@
   const objOffsetX = $derived(cellSize / 2);
   const objOffsetY = $derived(cellSize / 1.5);
 
-  function toggleTheme() {
-    isDarkMode.update((v) => !v);
-  }
+
 </script>
 
 <div class="wrapper">
-  <div class="controls">
-    <button
-      class="toggle-btn"
-      class:dark={$isDarkMode}
-      on:click={toggleWalls}
-    >
-      {$showWalls ? "👁️ Скрыть стены" : "🧱 Показать стены"}
-    </button>
-
-    <button class="toggle-btn" class:dark={$isDarkMode} on:click={toggleTheme}>
-      {$isDarkMode ? "☀️ Светлая" : "🌙 Тёмная"}
-    </button>
-  </div>
+  
 
   <div
     class="preview"
@@ -212,40 +198,6 @@
     box-sizing: border-box;
     overflow: hidden;
     background: transparent;
-  }
-
-  .controls {
-    display: flex;
-    gap: 8px;
-    padding-top: 8px;
-    justify-content: center;
-    flex-shrink: 0;
-  }
-
-  .toggle-btn {
-    padding: 8px 16px;
-    border: none;
-    border-radius: 8px;
-    background: rgba(80, 66, 125, 0.1);
-    color: #50427d;
-    font-size: 14px;
-    font-weight: 600;
-    cursor: pointer;
-    font-family: inherit;
-    transition: background 0.15s;
-  }
-
-  .toggle-btn:hover {
-    background: rgba(80, 66, 125, 0.18);
-  }
-
-  .toggle-btn.dark {
-    background: rgba(217, 200, 251, 0.1);
-    color: #d9c8fb;
-  }
-
-  .toggle-btn.dark:hover {
-    background: rgba(217, 200, 251, 0.18);
   }
 
   .preview {

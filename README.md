@@ -1,5 +1,6 @@
-<img width="613" height="840" alt="image" src="https://github.com/user-attachments/assets/af4f6e57-40d9-40c7-9122-833acc3e0293" />
+<img width="601" height="672" alt="image" src="https://github.com/user-attachments/assets/8ab7fa9f-de4f-41d6-9ec7-6314a5d3d75d" />
 
+<img width="892" height="665" alt="image" src="https://github.com/user-attachments/assets/f13e1eb2-f90c-4eae-88ec-4e0b5b69ca17" />
 
 # 🎨 Color Pool Puzzle 
 Посетите [наш сайт](https://ziadik.github.io/color_ball_puzzle_svelte/)

@@ -1,5 +1,6 @@
 <!-- src/components/editor/LayerPanel.svelte -->
 <script>
+import { isDarkMode } from '../../lib/stores/gameStore.svelte.js';
   let {
     selectedTool = 'wall',
     selectedColor = 1,
@@ -30,7 +31,7 @@
   let holesCount = $derived(objectsGrid.flat().filter(v => v >= 22 && v <= 77).length);
 </script>
 
-<div class="layer-panel" class:mobile={isMobile} class:dark={isDark}>
+<div class="layer-panel" class:mobile={isMobile} class:dark={$isDarkMode}>
   <div class="layer-section">
     <div class="layer-title">🎯 Balls</div>
     <div class="layer-items">

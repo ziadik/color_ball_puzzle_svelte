@@ -1,6 +1,6 @@
 <!-- src/components/GameBoard.svelte -->
 <script>
-  import { colorToCss } from "../lib/models/GameColor.js";
+  import { Colors } from "../lib/styles/colors.js";
   import WallSVG from "./WallSVG.svelte";
   import {
     fieldEngine,
@@ -8,178 +8,296 @@
     isDarkMode,
     makeMove,
     vibrationEnabled,
-    movesCount,
   } from "../lib/stores/gameStore.svelte.js";
   import { soundManager } from "../lib/utils/sound.js";
   import { getWallLayer } from "../lib/models/WallType.js";
+  import { generateWalls } from "../lib/engine/generateWalls.js";
+  import { FieldEngine } from "../lib/engine/FieldEngine.js";
+  import {
+    Level,
+    createBall,
+    createHole,
+    createBlock,
+  } from "../lib/models/Level.js";
 
   let {
     containerWidth = 0,
     containerHeight = 0,
-    preview = false,
-    gridWidth: previewWidth = 0,
-    gridHeight: previewHeight = 0,
-    wallsGrid: previewWalls = [],
-    objectsGrid: previewObjects = [],
+
+    // Режим:
+    //   'game'    — читает fieldEngine из store (по умолчанию)
+    //   'preview' — показывает objectsGrid, walls из генератора, без ввода
+    //   'play'    — играет objectsGrid локально (свой FieldEngine)
+    mode = "game",
+
+    // Для 'preview' и 'play' — источник данных
+    objectsGrid: externalObjects = null,
+
+    // Дополнительно
+    editable = null,
+    previewWalls: extWalls = null,
   } = $props();
 
-  let engine = $state(null);
+  // ============================================================
+  // ENGINE
+  // ============================================================
+  let localEngine = $state(null);
+  let globalEngine = $state(null);
+
+  const isPreview = $derived(mode === "preview");
+  const isPlay = $derived(mode === "play");
+  const isGame = $derived(mode === "game");
+  const canInteract = $derived(isPlay || isGame);
+
+  // Подписка на глобальный engine (только game)
+  $effect(() => {
+    if (!isGame) return;
+    const unsub = fieldEngine.subscribe((e) => {
+      globalEngine = e;
+    });
+    return unsub;
+  });
+
+  // Локальный engine (только play)
+  $effect(() => {
+    if (!isPlay) {
+      localEngine = null;
+      return;
+    }
+    if (!externalObjects?.length) return;
+    if (localEngine) return;
+
+    const H = externalObjects.length;
+    const W = externalObjects[0]?.length || 0;
+    const wallsArr = generateWalls(externalObjects, W + 1, H + 1);
+
+    const field = [];
+    for (let y = 0; y < H; y++) {
+      const row = [];
+      for (let x = 0; x < W; x++) {
+        const v = externalObjects[y][x];
+        if (v >= 2 && v <= 7) row.push(createBall(v - 1));
+        else if (v >= 22 && v <= 77)
+          row.push(createHole(Math.floor(v / 11) - 1));
+        else if (v === 1) row.push(createBlock());
+        else row.push(null);
+      }
+      field.push(row);
+    }
+
+    const lvl = new Level(W, H, field, wallsArr);
+    localEngine = new FieldEngine(lvl);
+  });
+
+  const activeEngine = $derived(isPlay ? localEngine : globalEngine);
+
+  // ============================================================
+  // ЧИСЛОВЫЕ OBJECTS
+  // ============================================================
+  // Для preview/play — externalObjects.
+  // Для game — конвертируем engine.level.field (исходный) в числа.
+  const numericObjects = $derived.by(() => {
+    // preview/play — внешние objects
+    if (externalObjects?.length) return externalObjects;
+
+    // game — исходный objectsGrid из level (8×8, как в levels.js)
+    const eng = activeEngine;
+    if (eng?.level?.objectsGrid) return eng.level.objectsGrid;
+
+    return null;
+  });
+
+  // ============================================================
+  // СГЕНЕРИРОВАННЫЕ WALLS
+  // ============================================================
+  const generatedWalls = $derived.by(() => {
+    const objs = numericObjects;
+    if (!objs?.length) return null;
+    const W = (objs[0]?.length || 0) + 1;
+    const H = objs.length + 1;
+    try {
+      return generateWalls(objs, W, H);
+    } catch (e) {
+      console.warn("generateWalls error:", e);
+      return null;
+    }
+  });
+
+  // ============================================================
+  // АКТИВНЫЕ WALLS
+  // Приоритет: явно переданные → сгенерированные
+  // ============================================================
+  const activeWalls = $derived.by(() => {
+    if (extWalls?.length) return extWalls;
+    if (generatedWalls?.length) return generatedWalls;
+    return [];
+  });
+
+  // ============================================================
+  // РАЗМЕРЫ
+  // ============================================================
   let cellSize = $state(0);
   let fieldWidth = $state(0);
   let fieldHeight = $state(0);
   let cols = $state(0);
   let rows = $state(0);
-  let touchStartX = $state(0);
-  let touchStartY = $state(0);
-  let isDragging = $state(false);
-  let isDark = $state(false);
 
-  let objects = $state([]);
-  let allWalls = $state([]);
-
-  let animating = $state(false);
-
-  isDarkMode.subscribe((value) => (isDark = value));
-
-  // === ЕДИНЫЙ РАСЧЁТ РАЗМЕРА ===
   function updateDimensions() {
-    let cols_, rows_;
+    const walls = activeWalls;
+    if (!walls?.length) return;
 
-    if (preview) {
-      cols_ = previewWidth || previewWalls[0]?.length || 1;
-      rows_ = previewHeight || previewWalls.length || 1;
-    } else if (engine) {
-      cols_ = engine.field[0]?.length || 1;
-      rows_ = engine.field.length || 1;
-    } else {
-      return;
-    }
-
-    cols = cols_;
-    rows = rows_;
+    cols = walls[0]?.length || 1;
+    rows = walls.length || 1;
 
     if (containerWidth === 0 || containerHeight === 0) return;
 
-    // Отступы контейнера (padding)
-    const padding = 16;
+    const padding = 8;
     const availableW = containerWidth - padding;
     const availableH = containerHeight - padding;
 
-    // Размер клетки по ширине и высоте
-    const cellByWidth = availableW / cols;
-    const cellByHeight = availableH / rows;
+    const cellW = availableW / cols;
+    const cellH = availableH / rows;
 
-    // Берём минимум — чтобы поле влезло целиком
-    const newCellSize = Math.floor(Math.min(cellByWidth, cellByHeight));
-
-    cellSize = Math.max(newCellSize, 8);
-    fieldWidth = cellSize * cols ;
-    fieldHeight = cellSize * rows ;
+    cellSize = Math.floor(Math.min(cellW, cellH));
+    fieldWidth = cellSize * cols;
+    fieldHeight = cellSize * rows;
   }
 
-  // === ЭФФЕКТ: подписка на fieldEngine ===
-  $effect(() => {
-    if (preview) return;
+  // ============================================================
+  // OBJECTS И WALLS — СПИСКИ ДЛЯ РЕНДЕРА
+  // ============================================================
+  let objects = $state([]);
+  let allWalls = $state([]);
 
-    const unsubscribe = fieldEngine.subscribe((e) => {
-      engine = e;
-      if (engine) {
-        updateDimensions();
-        updateObjectsAndWalls();
+  function collectObjects() {
+    // play → из engine
+    if (isPlay && localEngine) {
+      const result = [];
+      for (let y = 0; y < localEngine.field.length; y++) {
+        for (let x = 0; x < localEngine.field[0].length; x++) {
+          const item = localEngine.field[y][x];
+          if (item && (item.type === "ball" || item.type === "hole")) {
+            result.push({ x, y, item });
+          }
+        }
       }
-    });
-    return unsubscribe;
-  });
+      return result;
+    }
 
-  // === ЭФФЕКТ: единый расчёт при изменении контейнера / данных ===
+    // preview → из externalObjects
+    if (isPreview && externalObjects?.length) {
+      const result = [];
+      for (let y = 0; y < externalObjects.length; y++) {
+        for (let x = 0; x < externalObjects[y].length; x++) {
+          const v = externalObjects[y][x];
+          if (v === 0 || v === 1) continue;
+          if (v >= 2 && v <= 7) {
+            result.push({ x, y, item: { type: "ball", color: v - 1 } });
+          } else if (v >= 22 && v <= 77) {
+            result.push({
+              x,
+              y,
+              item: { type: "hole", color: Math.floor(v / 11) - 1 },
+            });
+          }
+        }
+      }
+      return result;
+    }
+
+    // game → из globalEngine
+    if (isGame && globalEngine) {
+      const result = [];
+      for (let y = 0; y < globalEngine.field.length; y++) {
+        for (let x = 0; x < globalEngine.field[0].length; x++) {
+          const item = globalEngine.field[y][x];
+          if (item && (item.type === "ball" || item.type === "hole")) {
+            result.push({ x, y, item });
+          }
+        }
+      }
+      return result;
+    }
+    return [];
+  }
+
+  function collectWalls() {
+    const walls = activeWalls;
+    if (!walls?.length) return [];
+    const result = [];
+    for (let y = 0; y < walls.length; y++) {
+      for (let x = 0; x < walls[y]?.length; x++) {
+        const t = walls[y][x];
+        if (t && t !== "N") result.push({ x, y, wallType: t });
+      }
+    }
+    return result;
+  }
+
+  function refresh() {
+    objects = collectObjects();
+    allWalls = collectWalls();
+  }
+
+  // ============================================================
+  // РЕАКТИВНОСТЬ
+  // ============================================================
   $effect(() => {
-    // Явные зависимости — чтобы effect срабатывал при изменении
+    const _walls = activeWalls;
+    const _objs = externalObjects;
     const _cw = containerWidth;
     const _ch = containerHeight;
-    const _pw = previewWidth;
-    const _ph = previewHeight;
-    const _pwLen = previewWalls.length;
-    const _poLen = previewObjects.length;
+    const _eng = activeEngine;
 
-    if (preview) {
-      if (previewWalls.length > 0 && previewObjects.length > 0) {
-        updateDimensions();
-        updateObjectsAndWalls();
-      }
-    } else if (engine) {
+    if (_walls?.length > 0 && _cw > 0 && _ch > 0) {
       updateDimensions();
-      updateObjectsAndWalls();
+      refresh();
     }
   });
 
-  function getWallType(x, y) {
-    let wallGrid;
-    if (preview) {
-      wallGrid = previewWalls;
-    } else if (engine && engine.walls) {
-      wallGrid = engine.walls;
-    } else {
-      return null;
-    }
-    if (y >= 0 && y < wallGrid.length && x >= 0 && x < wallGrid[0]?.length) {
-      const wall = wallGrid[y][x];
-      const wallMap = {
-        L: "L",
-        R: "R",
-        T: "T",
-        D: "D",
-        LIT: "LIT",
-        RIT: "RIT",
-        LOT: "LOT",
-        ROT: "ROT",
-        LID: "LID",
-        RID: "RID",
-        LOD: "LOD",
-        ROD: "ROD",
-        B: "B",
-        LB: "LB",
-        RB: "RB",
-        N: "N",
-      };
-      return wallMap[wall] || null;
-    }
-    return null;
-  }
+  // ============================================================
+  // СМЕЩЕНИЕ OBJECTS
+  // ============================================================
+  const gridOffsetX = $derived(cellSize / 2);
+  const gridOffsetY = $derived(cellSize / 1.5);
+
+  // ============================================================
+  // ВВОД
+  // ============================================================
+  let animating = $state(false);
+  let touchStartX = 0,
+    touchStartY = 0,
+    isDragging = false;
+  let mouseStartX = 0,
+    mouseStartY = 0,
+    isMouseDown = false;
 
   function handleTouchStart(e) {
-    if (animating || preview) return;
-    const touch = e.touches[0];
-    if (!touch) return;
-    touchStartX = touch.clientX;
-    touchStartY = touch.clientY;
+    if (animating || !canInteract) return;
+    const t = e.touches[0];
+    if (!t) return;
+    touchStartX = t.clientX;
+    touchStartY = t.clientY;
     isDragging = false;
   }
 
   function handleTouchMove(e) {
-    if (animating || preview) return;
-    const touch = e.touches[0];
-    if (!touch) return;
-    const dx = touch.clientX - touchStartX;
-    const dy = touch.clientY - touchStartY;
-    if (Math.abs(dx) > 8 || Math.abs(dy) > 8) {
-      isDragging = true;
-    }
+    if (animating || !canInteract) return;
+    const t = e.touches[0];
+    if (!t) return;
+    const dx = t.clientX - touchStartX;
+    const dy = t.clientY - touchStartY;
+    if (Math.abs(dx) > 8 || Math.abs(dy) > 8) isDragging = true;
   }
 
   async function handleTouchEnd(e) {
-    if (animating || preview) return;
-    if (!isDragging) return;
-
-    const touch = e.changedTouches[0];
-    if (!touch) return;
-
-    const dx = touch.clientX - touchStartX;
-    const dy = touch.clientY - touchStartY;
-
-    const threshold = 15;
-    if (Math.abs(dx) < threshold && Math.abs(dy) < threshold) return;
-
-    const direction =
+    if (animating || !canInteract || !isDragging) return;
+    const t = e.changedTouches[0];
+    if (!t) return;
+    const dx = t.clientX - touchStartX;
+    const dy = t.clientY - touchStartY;
+    if (Math.abs(dx) < 15 && Math.abs(dy) < 15) return;
+    const dir =
       Math.abs(dx) > Math.abs(dy)
         ? dx > 0
           ? "right"
@@ -187,50 +305,34 @@
         : dy > 0
           ? "down"
           : "up";
-
-    const { col, row } = getCellFromPosition(touchStartX, touchStartY);
-
-    if (col !== null && row !== null) {
-      await handleMove(col, row, direction);
-    }
+    const cell = getCellFromPosition(touchStartX, touchStartY);
+    if (cell) await doMove(cell.col, cell.row, dir);
   }
 
-  let mouseStartX = 0;
-  let mouseStartY = 0;
-  let isMouseDown = false;
-
   function handleMouseDown(e) {
-    if (animating || preview) return;
-    if (e.button !== 0) return;
+    if (animating || !canInteract || e.button !== 0) return;
     mouseStartX = e.clientX;
     mouseStartY = e.clientY;
     isMouseDown = true;
   }
 
   function handleMouseMove(e) {
-    if (!isMouseDown || animating || preview) return;
+    if (!isMouseDown || animating || !canInteract) return;
     const dx = e.clientX - mouseStartX;
     const dy = e.clientY - mouseStartY;
-    if (Math.abs(dx) > 8 || Math.abs(dy) > 8) {
-      isDragging = true;
-    }
+    if (Math.abs(dx) > 8 || Math.abs(dy) > 8) isDragging = true;
   }
 
   async function handleMouseUp(e) {
-    if (animating || preview) return;
-    if (!isMouseDown) return;
+    if (animating || !canInteract || !isMouseDown) return;
     isMouseDown = false;
-
     const dx = e.clientX - mouseStartX;
     const dy = e.clientY - mouseStartY;
-
-    const threshold = 15;
-    if (Math.abs(dx) < threshold && Math.abs(dy) < threshold) {
+    if (Math.abs(dx) < 15 && Math.abs(dy) < 15) {
       isDragging = false;
       return;
     }
-
-    const direction =
+    const dir =
       Math.abs(dx) > Math.abs(dy)
         ? dx > 0
           ? "right"
@@ -238,12 +340,8 @@
         : dy > 0
           ? "down"
           : "up";
-
-    const { col, row } = getCellFromPosition(mouseStartX, mouseStartY);
-
-    if (col !== null && row !== null) {
-      await handleMove(col, row, direction);
-    }
+    const cell = getCellFromPosition(mouseStartX, mouseStartY);
+    if (cell) await doMove(cell.col, cell.row, dir);
     isDragging = false;
   }
 
@@ -254,144 +352,92 @@
 
   function getCellFromPosition(clientX, clientY) {
     const boardEl = document.querySelector(".board");
-    if (!boardEl) return { col: null, row: null };
-
+    if (!boardEl) return null;
     const rect = boardEl.getBoundingClientRect();
-    const padding = 3;
-    const offsetX = cellSize / 2;
-    const offsetY = cellSize / 1.5;
-
-    let relX = clientX - rect.left - padding - offsetX;
-    let relY = clientY - rect.top - padding - offsetY;
-
+    const relX = clientX - rect.left - gridOffsetX;
+    const relY = clientY - rect.top - gridOffsetY;
     const col = Math.floor(relX / cellSize);
     const row = Math.floor(relY / cellSize);
-
     return { col, row };
   }
 
-  async function handleMove(col, row, direction) {
-    if (!engine) return;
-
-    if (
-      row < 0 ||
-      row >= engine.field.length ||
-      col < 0 ||
-      col >= engine.field[0].length
-    ) {
-      return;
-    }
-
-    const item = engine.field[row][col];
-    if (!item || item.type !== "ball") {
-      return;
-    }
-
+  async function doMove(col, row, dir) {
     animating = true;
-    const success = makeMove(col, row, direction);
-    if (success) {
-      if (engine.lastMoveWasHitHole) {
+
+    if (isPlay && localEngine) {
+      const ok = localEngine.makeTurn(col, row, dir);
+      if (ok) {
+        if (localEngine.lastMoveWasHitHole) soundManager.playHoleCapture();
+        else soundManager.playMove();
+        refresh();
+        await new Promise((r) => setTimeout(r, 120));
+      } else {
+        soundManager.playError();
+      }
+      animating = false;
+      return;
+    }
+
+    // game
+    if (!globalEngine) {
+      animating = false;
+      return;
+    }
+    const item = globalEngine.field[row]?.[col];
+    if (!item || item.type !== "ball") {
+      animating = false;
+      return;
+    }
+
+    const ok = makeMove(col, row, dir);
+    if (ok) {
+      if (globalEngine.lastMoveWasHitHole) {
         soundManager.playHoleCapture();
         if (vibrationEnabled) soundManager.playVibration();
       } else {
         soundManager.playMove();
       }
-      updateObjectsAndWalls();
-      await new Promise((resolve) => setTimeout(resolve, 150));
+      refresh();
+      await new Promise((r) => setTimeout(r, 150));
     } else {
       soundManager.playError();
     }
     animating = false;
   }
 
-  function getObjects() {
-    if (preview) {
-      const result = [];
-      for (let y = 0; y < previewObjects.length; y++) {
-        for (let x = 0; x < previewObjects[y]?.length; x++) {
-          const val = previewObjects[y][x];
-          if (val === 0) continue;
-          let type = "block";
-          if (val >= 2 && val <= 7) type = "ball";
-          else if (val >= 22 && val <= 77) type = "hole";
-          else if (val === 1) type = "block";
-          if (type !== "block") {
-            const color = type === "ball" ? val - 1 : Math.floor(val / 11);
-            result.push({ x, y, item: { type, color } });
-          }
-        }
-      }
-      return result;
+  // ============================================================
+  // ПОБЕДА (play)
+  // ============================================================
+  const isWin = $derived(isPlay && localEngine ? localEngine.isWin() : false);
+  const movesCount = $derived(
+    isPlay && localEngine ? localEngine.movesCount : 0,
+  );
+
+  export function reset() {
+    if (isPlay && externalObjects?.length) {
+      localEngine = null;
     }
-    if (!engine) return [];
-    const result = [];
-    for (let y = 0; y < engine.field.length; y++) {
-      for (let x = 0; x < engine.field[0].length; x++) {
-        const item = engine.field[y][x];
-        if (item && (item.type === "ball" || item.type === "hole")) {
-          result.push({ x, y, item });
-        }
-      }
-    }
-    return result;
   }
-
-  function getAllWalls() {
-    if (preview) {
-      const result = [];
-      for (let y = 0; y < previewWalls.length; y++) {
-        for (let x = 0; x < previewWalls[y]?.length; x++) {
-          const wallType = getWallType(x, y);
-          if (wallType && wallType !== "N") {
-            result.push({ x, y, wallType });
-          }
-        }
-      }
-      return result;
-    }
-    if (!engine) return [];
-    const result = [];
-    for (let y = 0; y < engine.walls.length; y++) {
-      for (let x = 0; x < engine.walls[0]?.length; x++) {
-        const wallType = getWallType(x, y);
-        if (wallType && wallType !== "N") {
-          result.push({ x, y, wallType });
-        }
-      }
-    }
-    return result;
-  }
-
-  function updateObjectsAndWalls() {
-    objects = getObjects();
-    allWalls = getAllWalls();
-  }
-
-  // Смещение для объектов:
-  // - В игре: объекты в правом-нижнем углу клетки (смещение)
-  // - В превью: без смещения (в центре клетки)
-const gridOffsetX = $derived(preview ? 0 : cellSize / 2);
-const gridOffsetY = $derived(preview ? 0 : cellSize / 1.5);
-  // Размер объекта
-  const objectSize = $derived(preview ? cellSize : cellSize);
-
-  console.log('GameBoard:', { preview, cellSize, gridOffsetX: preview ? 0 : cellSize / 2 });
 </script>
 
 <div
   class="board-container"
   style="width: {containerWidth}px; height: {containerHeight}px;"
 >
-  {#if (engine || preview) && cellSize > 0}
+  {#if cellSize > 0 && allWalls.length > 0}
     <div
       class="board"
-      class:preview
+      class:dark={$isDarkMode}
+      class:interactive={canInteract}
+      class:preview={isPreview}
       style="
-        width: {fieldWidth}px; 
-        height: {fieldHeight}px; 
-        --cell-size: {cellSize}px;
-      "
-      class:dark={isDark}
+    width: {fieldWidth}px;
+    height: {fieldHeight}px;
+    --cell-size: {cellSize}px;
+    --board-bg: {Colors.Background.appBackground($isDarkMode)};
+    --field-bg: {Colors.Background.fieldBackground($isDarkMode)};
+    --grid-color: {Colors.Grid.grid($isDarkMode)};
+  "
       on:mousedown={handleMouseDown}
       on:mousemove={handleMouseMove}
       on:mouseup={handleMouseUp}
@@ -402,18 +448,20 @@ const gridOffsetY = $derived(preview ? 0 : cellSize / 1.5);
     >
       <div class="board-layer board-background" />
 
+      <!-- Сетка -->
       <div
         class="board-layer board-grid"
         style="
-          left: {gridOffsetX}px;
-          top: {gridOffsetY}px;
-          width: calc(100% - {gridOffsetX}px);
-          height: calc(100% - {gridOffsetY}px);
-        "
+    left: 0;
+    top: 0;
+    width: {cols * cellSize}px;
+    height: {rows * cellSize}px;
+  "
       />
 
+      <!-- Лунки -->
       <div class="board-layer board-holes">
-        {#each objects as { x, y, item } (item)}
+        {#each objects as { x, y, item } (x + "-" + y + "-h")}
           {#if item.type === "hole"}
             <div
               class="hole"
@@ -422,7 +470,7 @@ const gridOffsetY = $derived(preview ? 0 : cellSize / 1.5);
                 top: {y * cellSize + gridOffsetY}px;
                 width: {cellSize}px;
                 height: {cellSize}px;
-                border-color: {colorToCss(item.color, isDark)};
+                border-color: {Colors.ballColor(item.color)};
               "
             >
               <div class="hole-inner"></div>
@@ -431,34 +479,29 @@ const gridOffsetY = $derived(preview ? 0 : cellSize / 1.5);
         {/each}
       </div>
 
+      <!-- Нижние стены -->
       <div class="board-layer board-bottom-walls">
-        {#each allWalls as { x, y, wallType }}
+        {#each allWalls as { x, y, wallType } (x + "-" + y + "-b-" + $isDarkMode)}
           {@const layer = getWallLayer(wallType)}
           {#if layer === "bottom"}
-            <WallSVG
-              {wallType}
-              {cellSize}
-              layer="bottom"
-              className="type-{wallType}"
-              gridX={x}
-              gridY={y}
-            />
+            <WallSVG {wallType} {cellSize} layer="bottom" gridX={x} gridY={y} />
           {/if}
         {/each}
       </div>
 
+      <!-- Шары -->
       <div class="board-layer board-balls">
-        {#each objects as { x, y, item } (item)}
+        {#each objects as { x, y, item } (x + "-" + y + "-ball")}
           {#if item.type === "ball"}
             <div
               class="ball"
-              class:hint={!preview && $showHint}
+              class:hint={isGame && $showHint}
               style="
                 left: {x * cellSize + gridOffsetX}px;
                 top: {y * cellSize + gridOffsetY}px;
                 width: {cellSize}px;
                 height: {cellSize}px;
-                background: {colorToCss(item.color, isDark)};
+                background: {Colors.ballColor(item.color)};
               "
             >
               <div class="ball-highlight"></div>
@@ -467,21 +510,26 @@ const gridOffsetY = $derived(preview ? 0 : cellSize / 1.5);
         {/each}
       </div>
 
+      <!-- Верхние стены -->
       <div class="board-layer board-top-walls">
-        {#each allWalls as { x, y, wallType }}
+        {#each allWalls as { x, y, wallType } (x + "-" + y + "-t-" + $isDarkMode)}
           {@const layer = getWallLayer(wallType)}
           {#if layer === "top"}
-            <WallSVG
-              {wallType}
-              {cellSize}
-              layer="top"
-              className="type-{wallType}"
-              gridX={x}
-              gridY={y}
-            />
+            <WallSVG {wallType} {cellSize} layer="top" gridX={x} gridY={y} />
           {/if}
         {/each}
       </div>
+
+      <!-- Победа (только play) -->
+      {#if isPlay && isWin}
+        <div class="win-overlay">
+          <div class="win-box">
+            <div class="win-icon">🏆</div>
+            <div class="win-title">Победа!</div>
+            <div class="win-moves">Ходов: {movesCount}</div>
+          </div>
+        </div>
+      {/if}
     </div>
   {/if}
 </div>
@@ -503,8 +551,13 @@ const gridOffsetY = $derived(preview ? 0 : cellSize / 1.5);
     border-radius: 14px;
     padding: 0;
     overflow: hidden;
-    cursor: pointer;
     touch-action: none;
+    background: var(--board-bg);
+    transition: background 0.3s ease;
+  }
+
+  .board.interactive {
+    cursor: pointer;
   }
 
   .board.preview {
@@ -512,42 +565,26 @@ const gridOffsetY = $derived(preview ? 0 : cellSize / 1.5);
     pointer-events: none;
   }
 
-  .board {
-    background: #50427d;
-  }
-  .board.dark {
-    background: #2d234b;
-  }
-
   .board-background {
+    background: var(--field-bg, #50427d);
     border-radius: 12px;
     z-index: 0;
   }
-  .board-background {
-    background: #50427d;
-  }
-  .board.dark .board-background {
-    background: #2d234b;
-  }
 
   .board-grid {
-    background-image: linear-gradient(
-        rgba(59, 45, 104, 0.4) 1px,
-        transparent 1px
-      ),
-      linear-gradient(90deg, rgba(59, 45, 104, 0.4) 1px, transparent 1px);
-    background-size: var(--cell-size, 40px) var(--cell-size, 40px);
-    border-radius: 12px;
-    z-index: 1;
     position: absolute;
-  }
-
-  .board.dark .board-grid {
+    z-index: 1;
+    border-radius: 12px;
     background-image: linear-gradient(
-        rgba(100, 86, 145, 0.3) 1px,
+        var(--grid-color, rgba(59, 45, 104, 0.4)) 1px,
         transparent 1px
       ),
-      linear-gradient(90deg, rgba(100, 86, 145, 0.3) 1px, transparent 1px);
+      linear-gradient(
+        90deg,
+        var(--grid-color, rgba(59, 45, 104, 0.4)) 1px,
+        transparent 1px
+      );
+    background-size: var(--cell-size, 40px) var(--cell-size, 40px);
   }
 
   .board-holes {
@@ -559,7 +596,6 @@ const gridOffsetY = $derived(preview ? 0 : cellSize / 1.5);
     border-radius: 18%;
     border: 5px solid;
     background: rgba(0, 0, 0, 0.08);
-    opacity: 1;
     z-index: 2;
     box-sizing: border-box;
   }
@@ -627,13 +663,52 @@ const gridOffsetY = $derived(preview ? 0 : cellSize / 1.5);
   }
 
   .board-layer {
+    position: absolute;
+    inset: 0;
     pointer-events: none;
   }
 
-  @media (max-width: 480px) {
-    .board {
-      border-radius: 10px;
-      padding: 0;
-    }
+  .win-overlay {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 10;
+    border-radius: 14px;
+  }
+
+  .win-box {
+    background: #fff;
+    border-radius: 16px;
+    padding: 24px 32px;
+    text-align: center;
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3);
+  }
+
+  .board.dark .win-box {
+    background: #2d234b;
+    color: #d9c8fb;
+  }
+
+  .win-icon {
+    font-size: 48px;
+  }
+
+  .win-title {
+    font-size: 20px;
+    font-weight: 700;
+    margin: 8px 0;
+    color: #50427d;
+  }
+
+  .board.dark .win-title {
+    color: #d9c8fb;
+  }
+
+  .win-moves {
+    font-size: 14px;
+    opacity: 0.7;
   }
 </style>

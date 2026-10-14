@@ -1,61 +1,100 @@
 // src/lib/styles/colors.js
 
+// ============================================================
+// БАЗОВЫЕ ПАЛИТРЫ
+// ============================================================
+
+const Palette = {
+  // Шары и лунки
+  Ball: {
+    1: { name: "Green", hex: "#34C759", emoji: "🟢" },
+    2: { name: "Red", hex: "#FF3B30", emoji: "🔴" },
+    3: { name: "Blue", hex: "#007AFF", emoji: "🔵" },
+    4: { name: "Yellow", hex: "#FFCC00", emoji: "🟡" },
+    5: { name: "Purple", hex: "#AF52DE", emoji: "🟣" },
+    6: { name: "Cyan", hex: "#32ADE6", emoji: "🔷" },
+  },
+
+  // Акценты
+  Accent: {
+    primary: "#50427D",
+    success: "#4CAF50",
+    error: "#F44336",
+    warning: "#FF9800",
+    info: "#2196F3",
+    gradientStart: "#722FC0",
+    gradientEnd: "#8F5CEC",
+    gradientIcon: "#D9C8FB",
+  },
+
+  // Фоны
+  Surface: {
+    light: "#F8F4FF",
+    dark: "#363344",
+  },
+};
+
+// ============================================================
+// ПРОИЗВОДНЫЕ
+// ============================================================
+
 export const Colors = {
-  // MARK: - Основные цвета приложения
+  BallMap: Palette.Ball,
+  ballColor: (color) => Palette.Ball[color]?.hex || "#999999",
+  ballMeta: (color) => Palette.Ball[color] || null,
+
   Background: {
-    appBackground: (isDark) => (isDark ? "#363344" : "#F8F4FF"),
+    appBackground: (isDark) =>
+      isDark ? Palette.Surface.dark : Palette.Surface.light,
     fieldBackground: (isDark) => (isDark ? "#2D234B" : "#50427D"),
   },
 
-  // MARK: - Цвета сетки
   Grid: {
     grid: (isDark) =>
       isDark ? "rgba(100, 86, 145, 0.3)" : "rgba(59, 45, 104, 0.4)",
   },
 
-  // MARK: - Цвета стен
   Walls: {
-    light: (isDark) => (isDark ? "#413C50" : "#F8F4FF"),
+    light: (isDark) => (isDark ? Palette.Surface.dark : Palette.Surface.light),
     accent: (isDark) => (isDark ? "#A69DD4" : "#8889B6"),
     shadow: (isDark) => (isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.2)"),
   },
 
-  // MARK: - Цвета интерфейса
   UI: {
-    levelText: (isDark) => (isDark ? "#FFFFFF" : "#50427D"),
-    buttonTint: (isDark) => (isDark ? "#FFFFFF" : "#50427D"),
-    hintButton: (isDark) => (isDark ? "#FFD700" : "#50427D"),
+    levelText: (isDark) => (isDark ? "#FFFFFF" : Palette.Accent.primary),
+    buttonTint: (isDark) => (isDark ? "#FFFFFF" : Palette.Accent.primary),
+    hintButton: (isDark) => (isDark ? "#FFD700" : Palette.Accent.primary),
   },
 
-  // MARK: - Цвета игровых объектов
   GameObjects: {
     ballHighlight: (isDark) =>
       isDark ? "rgba(255,255,255,0.6)" : "rgba(255,255,255,0.3)",
-    holeStroke: (isDark, color) => (isDark ? color : color),
+    holeStroke: (isDark, color) => color,
   },
 
-  // MARK: - Основные цвета
-  primary: "#50427D",
-  secondary: "#4CAF50",
-  backgroundColor: "#F8F4FF",
-  surfaceColor: "#F8F4FF",
-  errorColor: "#F44336",
-  successColor: "#4CAF50",
-  warningColor: "#FF9800",
-  infoColor: "#2196F3",
+  primary: Palette.Accent.primary,
+  secondary: Palette.Accent.success,
+  errorColor: Palette.Accent.error,
+  successColor: Palette.Accent.success,
+  warningColor: Palette.Accent.warning,
+  infoColor: Palette.Accent.info,
 
-  // Градиент кнопок
-  buttonGradientStart: "#722FC0",
-  buttonGradientEnd: "#8F5CEC",
-  buttonIconColor: "#D9C8FB",
+  backgroundColor: Palette.Surface.light,
+  surfaceColor: Palette.Surface.light,
 
-  // Alert цвета
-  alertTitleColor: (isDark) => (isDark ? "#FFFFFF" : "#50427D"),
+  buttonGradientStart: Palette.Accent.gradientStart,
+  buttonGradientEnd: Palette.Accent.gradientEnd,
+  buttonIconColor: Palette.Accent.gradientIcon,
+
+  alertTitleColor: (isDark) => (isDark ? "#FFFFFF" : Palette.Accent.primary),
   alertMessageColor: (isDark) => (isDark ? "#FFFFFF" : "rgba(80,66,125,0.8)"),
-  alertBackgroundColor: (isDark) => (isDark ? "#2D2341" : "#F8F4FF"),
-  alertBorderColor: (isDark) => (isDark ? "rgba(166,157,212,0.5)" : "#50427D"),
-  alertSuccessActionColor: (isDark) => (isDark ? "#4CAF50" : "#4CAF50"),
+  alertBackgroundColor: (isDark) =>
+    isDark ? "#2D2341" : Palette.Surface.light,
+  alertBorderColor: (isDark) =>
+    isDark ? "rgba(166,157,212,0.5)" : Palette.Accent.primary,
+  alertSuccessActionColor: () => Palette.Accent.success,
   alertCancelActionColor: (isDark) =>
     isDark ? "rgba(255,255,255,0.9)" : "rgba(80,66,125,0.6)",
-  alertDestructiveActionColor: (isDark) => (isDark ? "#FF4D4D" : "#F44336"),
+  alertDestructiveActionColor: (isDark) =>
+    isDark ? "#FF4D4D" : Palette.Accent.error,
 };

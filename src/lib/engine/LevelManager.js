@@ -92,7 +92,21 @@ export class LevelManager {
       }
     }
 
-    return new Level(width, height, field, walls);
+    // Сохраняем ЧИСТЫЕ числовые objects (8×8, как в levels.js)
+    // — источник истины для генерации стен
+    const numericObjects = [];
+    for (let y = 0; y < objHeight; y++) {
+      const row = [];
+      const objRow = objectData[y]?.split(" ") || [];
+      for (let x = 0; x < objWidth; x++) {
+        row.push(parseInt(objRow[x]) || 0);
+      }
+      numericObjects.push(row);
+    }
+
+    const lvl = new Level(width, height, field, walls);
+    lvl.objectsGrid = numericObjects; // ← 8×8 как в levels.js
+    return lvl;
   }
 
   getCurrentLevel() {

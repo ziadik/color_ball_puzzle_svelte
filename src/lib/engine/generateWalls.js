@@ -1,7 +1,8 @@
 // src/lib/engine/generateWalls.js
 
 /**
- * Бинарная карта: 1 = пустота, 0 = занято
+ * Бинарная карта: 1 = пустота, 0 = занято.
+ * Flood fill от шаров и лунок.
  */
 export function computeBinary(objects) {
   const H = objects.length;
@@ -51,7 +52,7 @@ export function computeBinary(objects) {
 }
 
 /**
- * Таблица: (LT, RT, LD, RD) → тип стены
+ * Таблица: (LT, RT, LD, RD) → тип стены.
  */
 export const WALL_TABLE = {
   "0000": "B",
@@ -75,18 +76,23 @@ export const WALL_TABLE = {
 /**
  * Генерация walls из objects.
  *
- * @param {number[][]} objects - сетка объектов
- * @param {number} targetW - ширина walls (может быть больше objects)
- * @param {number} targetH - высота walls
+ * @param {number[][]} objects - сетка объектов (N×M)
+ * @param {number} targetW - ширина walls (обычно N+1)
+ * @param {number} targetH - высота walls (обычно M+1)
  * @returns {string[][]} - сгенерированные walls
  */
 export function generateWalls(objects, targetW, targetH) {
+  if (!objects?.length) return [];
+
   const bin = computeBinary(objects);
 
+  const W = targetW || (objects[0]?.length || 0) + 1;
+  const H = targetH || objects.length + 1;
+
   const walls = [];
-  for (let y = 0; y < targetH; y++) {
+  for (let y = 0; y < H; y++) {
     const row = [];
-    for (let x = 0; x < targetW; x++) {
+    for (let x = 0; x < W; x++) {
       const LT = bin[y - 1]?.[x - 1] ?? 0;
       const RT = bin[y - 1]?.[x] ?? 0;
       const LD = bin[y]?.[x - 1] ?? 0;
@@ -102,7 +108,6 @@ export function generateWalls(objects, targetW, targetH) {
 
 /**
  * Сравнение двух walls.
- * Возвращает матрицу: true = совпадает, false = расхождение.
  */
 export function diffWalls(genWalls, refWalls) {
   const H = Math.max(genWalls.length, refWalls.length);
